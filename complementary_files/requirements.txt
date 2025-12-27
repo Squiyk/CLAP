@@ -1,0 +1,7 @@
+customtkinter
+pygame
+pillow
+numpy
+matplotlib
+nibabel
+pandas
