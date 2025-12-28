@@ -25,26 +25,32 @@ class CLAP(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        #### Populating sidebar ####
-        self.sidebar_frame = ctk.CTkFrame(self,corner_radius=10)
+        # Sidebar setup
+        self.sidebar_frame = ctk.CTkFrame(self,corner_radius=0, fg_color="transparent")
         self.sidebar_frame.grid(row=0, column=0, sticky="nswe")
         self.sidebar_frame.grid_rowconfigure(1, weight=1)
-        self.sidebar_frame.grid_columnconfigure(0, weight=1)
 
-        self.header_frame = ctk.CTkFrame(self.sidebar_frame)
-        self.header_frame.grid(row=0, column=0, sticky="ew")
-        self.header_frame.grid_columnconfigure(0, weight=1)
+        #  Sidebar title card
+        sidebar_title_card = ctk.CTkFrame(self.sidebar_frame, corner_radius=10, fg_color=("white", "#2B2B2B"))
+        sidebar_title_card.grid(row=0, column=0, sticky="nswe", padx=(20,0), pady=20)
+        sidebar_title_card.grid_columnconfigure(0, weight=1, minsize=200)
 
-        self.logo_label = ctk.CTkLabel(self.header_frame, text="C.L.A.P. 👏🏻", font=ctk.CTkFont(size=20, weight="bold"),corner_radius=10)
-        self.logo_label.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
+        logo_label = ctk.CTkLabel(sidebar_title_card, text="C.L.A.P. 👏🏻", font=ctk.CTkFont(size=20, weight="bold"),corner_radius=0)
+        logo_label.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
+        logo_label.bind("<Button-1>", self.play_clapping_sound)
 
-        self.logo_label.bind("<Button-1>", self.play_clapping_sound)
+        # Sidebar button card
+        sidebar_button_card = ctk.CTkFrame(self.sidebar_frame, corner_radius=10, fg_color=("white", "#2B2B2B"))
+        sidebar_button_card.grid(row=1, column=0, sticky="nswe", padx=(20,0), pady=(0,20))
+        sidebar_button_card.grid_columnconfigure(0, weight=1)
+        sidebar_button_card.grid_rowconfigure(0, weight=1)
 
-        self.sidebar_btn_1 = ctk.CTkButton(self.sidebar_frame, text="Tools ▼", fg_color="#0078D7", command=self.toggle_tools_menu)
-        self.sidebar_btn_1.grid(row=4, column=0, padx=10, pady=10)
+        # Sidebar buttons
+        self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools ▼", fg_color="#0078D7", command=self.toggle_tools_menu)
+        self.sidebar_btn_1.grid(row=1, column=0, padx=10, pady=10)
 
         # Tools drawer
-        self.tools_drawer = ctk.CTkFrame(self.sidebar_frame)
+        self.tools_drawer = ctk.CTkFrame(sidebar_button_card, fg_color="transparent")
 
         self.bt_btn_1 = ctk.CTkButton(self.tools_drawer, text="Home", command=self.setup_home_page)
         self.bt_btn_1.pack(fill="x", padx=10, pady=5)
@@ -69,7 +75,7 @@ class CLAP(ctk.CTk):
             self.tools_drawer.grid_forget()
             self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
         else:
-            self.tools_drawer.grid(row=3, column=0, sticky="ew")
+            self.tools_drawer.grid(row=0, column=0, sticky="sew")
             self.sidebar_btn_1.configure(text="Tools ▲", fg_color="#004E81")
 
     def clear_main_pannel(self):
@@ -144,7 +150,7 @@ class CLAP(ctk.CTk):
         newreg_label = ctk.CTkLabel(
             newreg_frame,
             text="Compute New Registration (ANTs SyN)",
-            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
             )
         newreg_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 10), sticky="w")
@@ -167,7 +173,7 @@ class CLAP(ctk.CTk):
             text="RUN REGISTRATION",
             height=45,
             fg_color="#6A5ACD",
-            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_new_registration_thread()
         )
         run_new_reg_btn.grid(row=4,column=0,columnspan=3, pady=(20,30), padx=20, sticky="ew")
@@ -190,7 +196,7 @@ class CLAP(ctk.CTk):
         applytrans_label = ctk.CTkLabel(
             apply_trans_frame,
             text="Apply an Existing Transform (ANTs Apply Transform)",
-            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
             )
         applytrans_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 10), sticky="w")
@@ -217,7 +223,7 @@ class CLAP(ctk.CTk):
             text="APPLY TRANSFORM(S)",
             height=45,
             fg_color="#6A5ACD",
-            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_apply_transform_thread()
         )
         run_apply_transform_btn.grid(row=5,column=0,columnspan=3, pady=(20,30), padx=20, sticky="ew")
@@ -256,7 +262,7 @@ class CLAP(ctk.CTk):
         gen_con_label = ctk.CTkLabel(
             gen_con_frame,
             text="Generate connectomes from parcellation",
-            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("Gray10", "Gray90")
         )
         gen_con_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
@@ -279,7 +285,7 @@ class CLAP(ctk.CTk):
             text="GENERATE CONNECTOMES",
             height=45,
             fg_color="#6A5ACD",
-            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_connectome_thread()
         )
         run_cnctm_btn.grid(row=4, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
@@ -302,7 +308,7 @@ class CLAP(ctk.CTk):
         zs_connectome_label = ctk.CTkLabel(
             zs_connectome_frame,
             text="Compute Z-Scored Connectome",
-            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
         )
         zs_connectome_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
@@ -325,7 +331,7 @@ class CLAP(ctk.CTk):
             text="Z-SCORE CONNECTOME",
             height=45,
             fg_color="#6A5ACD",
-            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_z_scored_connectome_thread()
         )
         run_compute_var_vs_ctl_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
@@ -348,7 +354,7 @@ class CLAP(ctk.CTk):
         disp_cnctm_label = ctk.CTkLabel(
             disp_cnctm_frame,
             text="Display Connectomes",
-            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
             )
         disp_cnctm_label.grid(row=0, column=0,columnspan=3, padx=20, pady=(20,10), sticky="w")
@@ -367,7 +373,7 @@ class CLAP(ctk.CTk):
         text="DISPLAY CONNECTOMES",
         height=45,
         fg_color="#6A5ACD",
-        font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+        font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
         command=lambda: self.start_display_connectome_thread()
         )
         run_disp_cnctm_btn.grid(row=3, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
@@ -404,7 +410,7 @@ class CLAP(ctk.CTk):
         SEEG_ROI_Mask_tool_label = ctk.CTkLabel(
             SEEG_ROI_Mask_tool_frame,
             text="SEEG ROI Mask Generation Tool",
-            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
         )
         SEEG_ROI_Mask_tool_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
@@ -432,7 +438,7 @@ class CLAP(ctk.CTk):
         lbl_rad = ctk.CTkLabel(
             radius_mode_frame,
             text="Sphere Radius:",
-            font=ctk.CTkFont(family="Roboto", size=14),
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
             text_color=("gray30", "gray80")
         )
         lbl_rad.pack(side="left", padx=(0,10))
@@ -449,7 +455,7 @@ class CLAP(ctk.CTk):
         lbl_mm = ctk.CTkLabel(
             radius_mode_frame,
             text="(mm)",
-            font=ctk.CTkFont(family="Roboto", size=14),
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
             text_color=("gray30","gray80")
         )
         lbl_mm.pack(side="left", padx=(5,0))
@@ -469,7 +475,7 @@ class CLAP(ctk.CTk):
         lbl_mode = ctk.CTkLabel(
             radius_mode_frame,
             text="Computation Mode:",
-            font=ctk.CTkFont(family="Roboto", size=14),
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
             text_color=("gray30", "gray80")
         )
         lbl_mode.pack(side="right", padx=(0,10))
@@ -481,7 +487,7 @@ class CLAP(ctk.CTk):
             text="GENERATE SEEG ROI MASKS",
             height=45,
             fg_color="#6A5ACD",
-            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_seeg_roi_mask_thread()
         )
         run_seeg_roi_mask_tool_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
@@ -495,7 +501,7 @@ class CLAP(ctk.CTk):
         lbl = ctk.CTkLabel(
             parent,
             text=label_text,
-            font=ctk.CTkFont(family="Roboto", size=14),
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
             text_color=("gray30", "gray80")
         )
         lbl.grid(row=row_idx, column=start_col, padx=(20,10),pady=10, sticky="w")
