@@ -18,6 +18,9 @@ class CLAP(ctk.CTk):
         self.title("CONNECT LAB ANALYSIS PIPELINE")
         self.geometry("1300x850")
 
+        ctk.set_appearance_mode("System")
+        ctk.set_default_color_theme("blue")
+
         self.grid_columnconfigure(0, weight=0,minsize=200)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -363,46 +366,118 @@ class CLAP(ctk.CTk):
         run_disp_cnctm_btn.grid(row=3, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
     def setup_ROI_toolbox_page(self):
+
+        # Remove previous page
         self.clear_main_pannel()
-        self.ROI_toolbox_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
-        self.ROI_toolbox_page.pack(fill="both", expand=True)
-        SEEG_ROI_Mask_tool_label = ctk.CTkLabel(self.ROI_toolbox_page, text="SEEG ROI Mask Generation Tool", font=ctk.CTkFont(size=20, weight="bold"))
-        self.ROI_toolbox_page.columnconfigure(1, weight=1)
+
+        # Close tool menu
         self.tools_drawer.grid_forget()
         self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
-        
-        SEEG_ROI_Mask_tool_label.grid(row=0, column=0, pady=20, padx=20, columnspan=2, sticky="w")
-        sel_ref_mask_img_btn = ctk.CTkButton(self.ROI_toolbox_page, text="Select Reference Mask Image", command=lambda: self.browse_file(self.entry_ref_mask_img))
-        sel_ref_mask_img_btn.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
-        self.entry_ref_mask_img = ctk.CTkEntry(self.ROI_toolbox_page)
-        self.entry_ref_mask_img.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
-        sel_seeg_coords_btn = ctk.CTkButton(self.ROI_toolbox_page, text="Select SEEG Coordinates File", command=lambda: self.browse_file(self.entry_seeg_coords))
-        sel_seeg_coords_btn.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
-        self.entry_seeg_coords = ctk.CTkEntry(self.ROI_toolbox_page)
-        self.entry_seeg_coords.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
-        out_roi_mask_dir_btn = ctk.CTkButton(self.ROI_toolbox_page, text="Select Output ROI Mask Directory", command=lambda: self.browse_folder(self.entry_output_roi_mask_dir))
-        out_roi_mask_dir_btn.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
-        self.entry_output_roi_mask_dir = ctk.CTkEntry(self.ROI_toolbox_page)
-        self.entry_output_roi_mask_dir.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
 
-        self.sel_compute_mode_segbtn = ctk.CTkSegmentedButton(self.ROI_toolbox_page, values=["Monopolar", "Bipolar"], fg_color="#515151", unselected_color="#515151",selected_color="#0078D7")
-        self.sel_compute_mode_segbtn.set("Monopolar")
-        self.sel_compute_mode_segbtn.grid(row=1, column=2, sticky="ew", padx=10, pady=10)
+        # Setup new page
+        self.ROI_toolbox_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
+        self.ROI_toolbox_page.pack(fill="both", expand=True)
 
-        radius_container = ctk.CTkFrame(self.ROI_toolbox_page, fg_color="transparent")
-        radius_container.grid(row=2, column=2, padx=10, pady=10, rowspan=2, sticky="ew")
-        radius_container_label = ctk.CTkLabel(radius_container, text="Select sphere radius :", font=ctk.CTkFont(size=12))
-        radius_container_label.pack(pady=(0,2), anchor="w")
-        radius_input_row = ctk.CTkFrame(radius_container, fg_color="transparent")
-        radius_input_row.pack(fill="x")
-        self.sel_compute_radius = ctk.CTkEntry(radius_input_row)
-        self.sel_compute_radius.pack(side="left", fill="x",expand=True)
+        self.ROI_toolbox_page.columnconfigure(0, weight=1)
+
+        #  SEEG ROI Mask Generation Tool #
+
+        # Frame for tool
+        SEEG_ROI_Mask_tool_frame = ctk.CTkFrame(
+            self.ROI_toolbox_page,
+            fg_color=("white","#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        SEEG_ROI_Mask_tool_frame.grid(row=1, column=0, padx=20, pady=20, sticky="ew")
+        SEEG_ROI_Mask_tool_frame.columnconfigure(1, weight=1)
+
+        # Label for tool
+        SEEG_ROI_Mask_tool_label = ctk.CTkLabel(
+            SEEG_ROI_Mask_tool_frame,
+            text="SEEG ROI Mask Generation Tool",
+            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        SEEG_ROI_Mask_tool_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
+
+        # Select input image
+        self.entry_ref_mask_img, sel_ref_mask_img_btn = self.createrow(SEEG_ROI_Mask_tool_frame,1,"Reference Mask Image:")
+        sel_ref_mask_img_btn.configure(command=lambda: self.browse_file(self.entry_ref_mask_img))
+
+        # Select SEEG coordinates file
+        self.entry_seeg_coords, sel_seeg_coords_btn = self.createrow(SEEG_ROI_Mask_tool_frame,2,"SEEG Coordinates File:")
+        sel_seeg_coords_btn.configure(command=lambda: self.browse_file(self.entry_seeg_coords))
+
+        # Select output ROI mask directory
+        self.entry_output_roi_mask_dir, out_roi_mask_dir_btn = self.createrow(SEEG_ROI_Mask_tool_frame,3,"Output ROI Mask Directory:")
+        out_roi_mask_dir_btn.configure(command=lambda: self.browse_folder(self.entry_output_roi_mask_dir))
+
+
+        # Radius and mode selection
+
+        # Create frame for radius and mode selection
+        radius_mode_frame = ctk.CTkFrame(SEEG_ROI_Mask_tool_frame, fg_color="transparent")
+        radius_mode_frame.grid(row=4, column=0, columnspan=3, padx=20, pady=(10,20), sticky="ew")
+
+        #Radius selection
+        lbl_rad = ctk.CTkLabel(
+            radius_mode_frame,
+            text="Sphere Radius:",
+            font=ctk.CTkFont(family="Roboto", size=14),
+            text_color=("gray30", "gray80")
+        )
+        lbl_rad.pack(side="left", padx=(0,10))
+
+        self.sel_compute_radius = ctk.CTkEntry(
+            radius_mode_frame,
+            width=60,
+            justify="center",
+            fg_color=("white", "#343638")
+        )
         self.sel_compute_radius.insert(0, "2")
-        sel_radius_unit_label = ctk.CTkLabel(radius_input_row, text="(mm)", text_color="#929292")
-        sel_radius_unit_label.pack(side="left", padx=(5,0))
+        self.sel_compute_radius.pack(side="left")
 
-        run_seeg_roi_mask_tool_btn = ctk.CTkButton(self.ROI_toolbox_page, text="Generate SEEG ROI Mask", height=40, fg_color="#00C448", font=ctk.CTkFont(size=14, weight="bold"), command=lambda: self.start_seeg_roi_mask_thread())
-        run_seeg_roi_mask_tool_btn.grid(row=4, column=0, columnspan=2, pady=(10, 30), padx=10, sticky="ew")
+        lbl_mm = ctk.CTkLabel(
+            radius_mode_frame,
+            text="(mm)",
+            font=ctk.CTkFont(family="Roboto", size=14),
+            text_color=("gray30","gray80")
+        )
+        lbl_mm.pack(side="left", padx=(5,0))
+
+
+        self.sel_compute_mode_segbtn = ctk.CTkSegmentedButton(
+            radius_mode_frame,
+            values=["Monopolar", "Bipolar"],
+            fg_color=("gray70", "gray30"),
+            unselected_color=("gray70", "gray30"),
+            selected_hover_color="#005A9E",
+            selected_color="#0078D7"
+        )
+        self.sel_compute_mode_segbtn.pack(side="right")
+        self.sel_compute_mode_segbtn.set("Monopolar")
+
+        lbl_mode = ctk.CTkLabel(
+            radius_mode_frame,
+            text="Computation Mode:",
+            font=ctk.CTkFont(family="Roboto", size=14),
+            text_color=("gray30", "gray80")
+        )
+        lbl_mode.pack(side="right", padx=(0,10))
+
+
+        # Run SEEG ROI Mask Generation button
+        run_seeg_roi_mask_tool_btn = ctk.CTkButton(
+            SEEG_ROI_Mask_tool_frame,
+            text="GENERATE SEEG ROI MASKS",
+            height=45,
+            fg_color="#6A5ACD",
+            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            command=lambda: self.start_seeg_roi_mask_thread()
+        )
+        run_seeg_roi_mask_tool_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
         
 
 ### HELPER FUNCTIONS ###
