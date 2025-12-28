@@ -26,7 +26,7 @@ class CLAP(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         #### Populating sidebar ####
-        self.sidebar_frame = ctk.CTkFrame(self,corner_radius=0)
+        self.sidebar_frame = ctk.CTkFrame(self,corner_radius=10)
         self.sidebar_frame.grid(row=0, column=0, sticky="nswe")
         self.sidebar_frame.grid_rowconfigure(1, weight=1)
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
@@ -35,7 +35,7 @@ class CLAP(ctk.CTk):
         self.header_frame.grid(row=0, column=0, sticky="ew")
         self.header_frame.grid_columnconfigure(0, weight=1)
 
-        self.logo_label = ctk.CTkLabel(self.header_frame, text="C.L.A.P. 👏🏻", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo_label = ctk.CTkLabel(self.header_frame, text="C.L.A.P. 👏🏻", font=ctk.CTkFont(size=20, weight="bold"),corner_radius=10)
         self.logo_label.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
 
         self.logo_label.bind("<Button-1>", self.play_clapping_sound)
@@ -85,9 +85,18 @@ class CLAP(ctk.CTk):
 
         self.home_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
         self.home_page.pack(fill="both", expand=True)
-        welcome_label = ctk.CTkLabel(self.home_page, text="Welcome to the CONNECT LAB ANALYSIS PIPELINE", font=ctk.CTkFont(size=20, weight="bold"))
+
+        # Close tool menu
+        self.tools_drawer.grid_forget()
+        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+
+        # Create Home page card
+        home_card = ctk.CTkFrame(self.home_page, corner_radius=10, fg_color=("white", "#2B2B2B"))
+        home_card.pack(padx=20, pady=20, fill="both", expand=True)
+
+        welcome_label = ctk.CTkLabel(home_card, text="Welcome to the CONNECT LAB ANALYSIS PIPELINE", font=ctk.CTkFont(size=20, weight="bold"))
         welcome_label.pack(pady=(100,20))
-        desc_label = ctk.CTkLabel(self.home_page, text="This application is designed to better organize the scripts produced by the lab and make them more accessible.\nUse the sidebar to navigate through different tools.", font=ctk.CTkFont(size=14))
+        desc_label = ctk.CTkLabel(home_card, text="This application is designed to better organize the scripts produced by the lab and make them more accessible.\nUse the sidebar to navigate through different tools.", font=ctk.CTkFont(size=14))
         desc_label.pack()
 
         img_path = self.resource_path(Path("complementary_files") / "lab_logo.png")
@@ -98,11 +107,9 @@ class CLAP(ctk.CTk):
         width = height * aspect_ratio
 
         logo = ctk.CTkImage(light_image=pil_image, dark_image=pil_image, size=(width,height))
-        logo_label = ctk.CTkLabel(self.home_page, image=logo, text="")
+        logo_label = ctk.CTkLabel(home_card, image=logo, text="")
         logo_label.pack(pady=(40,20))
 
-        self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
 
     def setup_registration_tools_page(self):
 
