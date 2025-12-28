@@ -278,14 +278,14 @@ class CLAP(ctk.CTk):
         # Compute z-scored connectome #
 
         # Frame for tool
-        zs_connectome_frame = ctk.CTkScrollableFrame(
+        zs_connectome_frame = ctk.CTkFrame(
             self.connectome_toolbox_page,
             fg_color=("white","#2B2B2B"),
             corner_radius=10,
             border_width=1,
             border_color=("#E0E0E0", "#404040")
         )
-        zs_connectome_frame.grid(row=1, column=0, pady=20, padx=20, sticky="ew")
+        zs_connectome_frame.grid(row=1,column=0,pady=20, padx=20, sticky="ew")
         zs_connectome_frame.columnconfigure(1, weight=1)
 
         # Label for tool
@@ -295,39 +295,72 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
             text_color=("gray10", "gray90")
         )
-        zs_connectome_frame.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
+        zs_connectome_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
 
         # Select subject connectome
-        sub_connectome_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Select subject connectome", command=lambda: self.browse_file(self.entry_sub_connectome))
-        sub_connectome_btn.grid(row=6, column=0, padx=10, pady=10, sticky="ew")
-        self.entry_sub_connectome = ctk.CTkEntry(self.connectome_toolbox_page)
-        self.entry_sub_connectome.grid(row=6, column=1, padx=10, pady=10, sticky="ew")
+        self.entry_sub_connectome, sub_connectome_btn = self.createrow(zs_connectome_frame,2,"Subject Connectome:")
+        sub_connectome_btn.configure(command=lambda: self.browse_file(self.entry_sub_connectome))
 
         # Select reference connectomes
-        ref_connectomes_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Select control connectomes", command=lambda: self.get_files_from_folder(self.entry_ref_connectomes, ".csv"))
-        ref_connectomes_btn.grid(row=7, column=0, padx=10, pady=10, sticky="nsew")
-        self.entry_ref_connectomes = ctk.CTkTextbox(self.connectome_toolbox_page, height=20)
-        self.entry_ref_connectomes.grid(row=7, column=1, padx=10, pady=10, sticky="ew")
-        output_zscore_cnctm_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Select Output Directory", command=lambda: self.browse_folder(self.entry_output_zscore_cnctm))
-        output_zscore_cnctm_btn.grid(row=8, column=0, padx=10, pady=10, sticky="ew")
-        self.entry_output_zscore_cnctm = ctk.CTkEntry(self.connectome_toolbox_page)
-        self.entry_output_zscore_cnctm.grid(row=8, column=1, padx=10, pady=10, sticky="ew")
-        run_compute_var_vs_ctl_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Compute Z-Score Relative to Controls", height=40, fg_color="#00C448", font=ctk.CTkFont(size=14, weight="bold"), command=lambda: self.start_z_scored_connectome_thread())
-        run_compute_var_vs_ctl_btn.grid(row=9, column=0, columnspan=2, pady=(10, 30), padx=10, sticky="ew")
+        self.entry_ref_connectomes, ref_connectomes_btn = self.createrow(zs_connectome_frame,3,"Reference connectomes", use_textbox=True)
+        ref_connectomes_btn.configure(command=lambda: self.get_files_from_folder(self.entry_ref_connectomes, ".csv"))
+
+        # Select output directory
+        self.entry_output_zscore_cnctm, output_zscore_cnctm_btn = self.createrow(zs_connectome_frame,4,"Output Directory:")
+        output_zscore_cnctm_btn.configure(command=lambda: self.browse_folder)
+
+        # Run Z-scoring of connectome
+        run_compute_var_vs_ctl_btn = ctk.CTkButton(
+            zs_connectome_frame,
+            text="Z-SCORE CONNECTOME",
+            height=45,
+            fg_color="#6A5ACD",
+            font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+            command=lambda: self.start_z_scored_connectome_thread()
+        )
+        run_compute_var_vs_ctl_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
 
-        disp_cnctm_label = ctk.CTkLabel(self.connectome_toolbox_page, text="Display Connectome(s)", font=ctk.CTkFont(size=20, weight="bold"))
-        disp_cnctm_label.grid(row=10, column=0, pady=20, padx=20, columnspan=2, sticky="w")
-        sel_disp_cnctm_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Select connectome(s) to display", command=lambda: self.browse_files(self.entry_disp_cnctm))
-        sel_disp_cnctm_btn.grid(row=11,column=0, padx=10, pady=10, sticky="nsew")
-        self.entry_disp_cnctm = ctk.CTkTextbox(self.connectome_toolbox_page, height=20)
-        self.entry_disp_cnctm.grid(row=11, column=1, padx=10, pady=10, sticky="ew")
-        sel_disp_lut_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Select LUT file(s)", command=lambda:self.browse_files(self.entry_disp_lut))
-        sel_disp_lut_btn.grid(row=12, column=0, padx=10, pady=10, sticky="nsew")
-        self.entry_disp_lut = ctk.CTkTextbox(self.connectome_toolbox_page, height=20)
-        self.entry_disp_lut .grid(row=12, column=1, padx=10, pady=10, sticky="ew")
-        run_disp_cnctm_btn = ctk.CTkButton(self.connectome_toolbox_page, text="Display Connectome(s)", height=40, fg_color="#00C448", font=ctk.CTkFont(size=14, weight="bold"))
-        run_disp_cnctm_btn.grid(row=13, column=0, columnspan=2, pady=(10, 30), padx=10, sticky="ew")
+        # Display select connectomes #
+
+        # Frame for tool
+        disp_cnctm_frame = ctk.CTkFrame(
+            self.connectome_toolbox_page,
+            fg_color=("white","#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        disp_cnctm_frame.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
+        disp_cnctm_frame.columnconfigure(1, weight=1)
+
+        # Label for tool
+        disp_cnctm_label = ctk.CTkLabel(
+            disp_cnctm_frame,
+            text="Display Connectomes",
+            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+            )
+        disp_cnctm_label.grid(row=0, column=0,columnspan=3, padx=20, pady=(20,10), sticky="w")
+
+        # Select connectomes to be displayed
+        self.entry_disp_cnctm, sel_disp_cnctm_btn = self.createrow(disp_cnctm_frame,1,"Connectome(s):", use_textbox=True)
+        sel_disp_cnctm_btn.configure(command=lambda: self.browse_files(self.entry_disp_cnctm))
+
+        # Select LUTs for axis annotation
+        self.entry_disp_lut, sel_disp_lut_btn = self.createrow(disp_cnctm_frame,2,"LUT file(s):", use_textbox=True)
+        sel_disp_lut_btn.configure(command=lambda: self.browse_files(self.entry_disp_lut))
+
+        # Run connectome display button
+        run_disp_cnctm_btn = ctk.CTkButton(
+        disp_cnctm_frame,
+        text="DISPLAY CONNECTOMES",
+        height=45,
+        fg_color="#6A5ACD",
+        font=ctk.CTkFont(family="Roboto", size=15, weight="bold"),
+        command=lambda: self.start_display_connectome_thread()
+        )
+        run_disp_cnctm_btn.grid(row=3, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
     def setup_ROI_toolbox_page(self):
         self.clear_main_pannel()
