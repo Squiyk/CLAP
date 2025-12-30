@@ -50,8 +50,6 @@ def gen_connectome(mask_image, tracks_list, output_dir, on_complete=None):
     if on_complete:
         on_complete()
 
-import os
-import numpy as np
 
 def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None):
 
@@ -115,7 +113,7 @@ def display_connectome(paired_data, on_complete=None):
         cols = 4
     else:
         cols = n_to_display
-        rows = (n_to_display + cols -1) // cols
+    rows = (n_to_display + cols -1) // cols
 
     fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 5*rows), squeeze=False)
     fig.canvas.manager.set_window_title('Connectome Viewer')

@@ -31,7 +31,12 @@ class CLAP(ctk.CTk):
         self.sidebar_frame.grid_rowconfigure(1, weight=1)
 
         #  Sidebar title card
-        sidebar_title_card = ctk.CTkFrame(self.sidebar_frame, corner_radius=10, fg_color=("white", "#2B2B2B"))
+        sidebar_title_card = ctk.CTkFrame(
+            self.sidebar_frame, corner_radius=10,
+            fg_color=("white", "#2B2B2B"),
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+            )
         sidebar_title_card.grid(row=0, column=0, sticky="nswe", padx=(20,0), pady=20)
         sidebar_title_card.grid_columnconfigure(0, weight=1, minsize=200)
 
@@ -40,14 +45,19 @@ class CLAP(ctk.CTk):
         logo_label.bind("<Button-1>", self.play_clapping_sound)
 
         # Sidebar button card
-        sidebar_button_card = ctk.CTkFrame(self.sidebar_frame, corner_radius=10, fg_color=("white", "#2B2B2B"))
+        sidebar_button_card = ctk.CTkFrame(
+            self.sidebar_frame, corner_radius=10,
+            fg_color=("white", "#2B2B2B"),
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+            )
         sidebar_button_card.grid(row=1, column=0, sticky="nswe", padx=(20,0), pady=(0,20))
         sidebar_button_card.grid_columnconfigure(0, weight=1)
         sidebar_button_card.grid_rowconfigure(0, weight=1)
 
         # Sidebar buttons
         self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools ▼", fg_color="#0078D7", command=self.toggle_tools_menu)
-        self.sidebar_btn_1.grid(row=1, column=0, padx=10, pady=10)
+        self.sidebar_btn_1.grid(row=1, column=0, padx=5, pady=20)
 
         # Tools drawer
         self.tools_drawer = ctk.CTkFrame(sidebar_button_card, fg_color="transparent")
@@ -97,7 +107,13 @@ class CLAP(ctk.CTk):
         self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
 
         # Create Home page card
-        home_card = ctk.CTkFrame(self.home_page, corner_radius=10, fg_color=("white", "#2B2B2B"))
+        home_card = ctk.CTkFrame(
+            self.home_page,
+            corner_radius=10,
+            fg_color=("white", "#2B2B2B"),
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+            )
         home_card.pack(padx=20, pady=20, fill="both", expand=True)
 
         welcome_label = ctk.CTkLabel(home_card, text="Welcome to the CONNECT LAB ANALYSIS PIPELINE", font=ctk.CTkFont(size=20, weight="bold"))
@@ -323,7 +339,7 @@ class CLAP(ctk.CTk):
 
         # Select output directory
         self.entry_output_zscore_cnctm, output_zscore_cnctm_btn = self.createrow(zs_connectome_frame,4,"Output Directory:")
-        output_zscore_cnctm_btn.configure(command=lambda: self.browse_folder)
+        output_zscore_cnctm_btn.configure(command=lambda: self.browse_folder(self.entry_output_zscore_cnctm))
 
         # Run Z-scoring of connectome
         run_compute_var_vs_ctl_btn = ctk.CTkButton(
