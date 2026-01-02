@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shlex
 from pathlib import Path
 
 def extract_subject_id_from_filename(filepath):
@@ -356,7 +357,9 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
         # Run FastSurfer with or without virtual environment activation
         if venv_activate and os.path.exists(venv_activate):
             # Wrap command in bash to source the virtual environment
-            bash_command = f"source {venv_activate} && {' '.join(cmd)}"
+            # Use shlex.quote to safely escape command elements
+            quoted_cmd = ' '.join(shlex.quote(arg) for arg in cmd)
+            bash_command = f"source {shlex.quote(venv_activate)} && {quoted_cmd}"
             process = subprocess.Popen(
                 ['bash', '-c', bash_command],
                 env=env,

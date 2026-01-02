@@ -6,6 +6,11 @@ import shutil
 class SettingsManager:
     """Manages user settings and configuration for CLAP application"""
     
+    # FreeSurfer version detection ranges
+    FREESURFER_MIN_VERSION = 6  # Minimum major version to search for
+    FREESURFER_MAX_VERSION = 9  # Maximum major version to search for
+    FREESURFER_MAX_MINOR = 10    # Maximum minor version to search for
+    
     def __init__(self):
         self.user_data_dir = Path(__file__).parent / "user_data"
         self.settings_file = self.user_data_dir / "settings.json"
@@ -198,8 +203,8 @@ class SettingsManager:
         ]
         
         # Also check versioned paths
-        for major_version in range(6, 9):  # FreeSurfer 6.x, 7.x, 8.x
-            for minor_version in range(0, 10):
+        for major_version in range(self.FREESURFER_MIN_VERSION, self.FREESURFER_MAX_VERSION):
+            for minor_version in range(0, self.FREESURFER_MAX_MINOR):
                 common_paths.append(f"/usr/local/freesurfer/{major_version}.{minor_version}")
                 common_paths.append(f"/Applications/freesurfer/{major_version}.{minor_version}")
                 common_paths.append(os.path.expanduser(f"~/freesurfer/{major_version}.{minor_version}"))
@@ -249,7 +254,7 @@ class SettingsManager:
                             if '.' in part and any(c.isdigit() for c in part):
                                 version_parts = part.split('.')
                                 if len(version_parts) >= 2 and version_parts[0].isdigit():
-                                    return part.split('.')[0] + '.' + part.split('.')[1]
+                                    return version_parts[0] + '.' + version_parts[1]
             except Exception:
                 pass
         

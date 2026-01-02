@@ -2068,7 +2068,22 @@ class CLAP(ctk.CTk):
         self._show_task_status("FastSurfer")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer, args=(input_image, subject_id, output_dir, fastsurfer_home, license_file, use_gpu, None, freesurfer_for_fastsurfer, self.on_fastsurfer_complete, lambda: self.cancel_task_flag), daemon=True)
+        task = threading.Thread(
+            target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer,
+            args=(
+                input_image,
+                subject_id,
+                output_dir,
+                fastsurfer_home,
+                license_file,
+                use_gpu,
+                None,  # num_threads
+                freesurfer_for_fastsurfer,
+                self.on_fastsurfer_complete,
+                lambda: self.cancel_task_flag
+            ),
+            daemon=True
+        )
         self.current_task_thread = task
         task.start()
 
