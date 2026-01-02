@@ -1133,46 +1133,47 @@ class CLAP(ctk.CTk):
             
             row_idx += 1
             
-            # Manual path configuration
-            path_label = ctk.CTkLabel(
-                deps_frame,
-                text="Custom Path:",
-                font=ctk.CTkFont(family="Proxima Nova", size=12),
-                text_color=("gray40", "gray70")
-            )
-            path_label.grid(row=row_idx, column=0, padx=(40, 10), pady=5, sticky="w")
-            
-            # Entry for custom path
-            path_entry = ctk.CTkEntry(
-                deps_frame,
-                height=30,
-                border_color=("#D0D0D0", "#505050"),
-                fg_color=("white", "#343638"),
-                text_color=("black", "white"),
-                border_width=2
-            )
-            current_path = dep_info.get("custom_path", "")
-            if current_path:
-                path_entry.insert(0, current_path)
-            path_entry.grid(row=row_idx, column=1, padx=10, pady=5, sticky="ew")
-            
-            # Browse button
-            browse_btn = ctk.CTkButton(
-                deps_frame,
-                text="...",
-                width=40,
-                height=30,
-                fg_color=("#F0F0F0", "#3A3A3A"),
-                text_color=("black", "white"),
-                hover_color=("#D9D9D9", "#505050"),
-                command=lambda name=dep_name, entry=path_entry: self.browse_dependency_path(name, entry)
-            )
-            browse_btn.grid(row=row_idx, column=2, padx=(0, 20), pady=5)
-            
-            # Store entry for later
-            self.dep_path_entries[dep_name] = path_entry
-            
-            row_idx += 1
+            # Manual path configuration - only show if dependency is not found
+            if not dep_info["available"]:
+                path_label = ctk.CTkLabel(
+                    deps_frame,
+                    text="Custom Path:",
+                    font=ctk.CTkFont(family="Proxima Nova", size=12),
+                    text_color=("gray40", "gray70")
+                )
+                path_label.grid(row=row_idx, column=0, padx=(40, 10), pady=5, sticky="w")
+                
+                # Entry for custom path
+                path_entry = ctk.CTkEntry(
+                    deps_frame,
+                    height=30,
+                    border_color=("#D0D0D0", "#505050"),
+                    fg_color=("white", "#343638"),
+                    text_color=("black", "white"),
+                    border_width=2
+                )
+                current_path = dep_info.get("custom_path", "")
+                if current_path:
+                    path_entry.insert(0, current_path)
+                path_entry.grid(row=row_idx, column=1, padx=10, pady=5, sticky="ew")
+                
+                # Browse button
+                browse_btn = ctk.CTkButton(
+                    deps_frame,
+                    text="...",
+                    width=40,
+                    height=30,
+                    fg_color=("#F0F0F0", "#3A3A3A"),
+                    text_color=("black", "white"),
+                    hover_color=("#D9D9D9", "#505050"),
+                    command=lambda name=dep_name, entry=path_entry: self.browse_dependency_path(name, entry)
+                )
+                browse_btn.grid(row=row_idx, column=2, padx=(0, 20), pady=5)
+                
+                # Store entry for later
+                self.dep_path_entries[dep_name] = path_entry
+                
+                row_idx += 1
         
         # Add timestamp of check
         check_time_label = ctk.CTkLabel(
