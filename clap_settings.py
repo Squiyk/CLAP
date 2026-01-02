@@ -238,33 +238,34 @@ class SettingsManager:
     def _get_freesurfer_version(self, freesurfer_home):
         """
         Try to detect FreeSurfer version from the installation.
-        Returns version string or None if not found.
+        Returns version string (major.minor) or None if not found.
         """
+        import re
+        
         # Try to read version from build-stamp.txt
         build_stamp = os.path.join(freesurfer_home, "build-stamp.txt")
         if os.path.exists(build_stamp):
             try:
                 with open(build_stamp, 'r') as f:
                     content = f.read().strip()
-                    # Extract version number (typically in format like "freesurfer-linux-centos7_x86_64-7.3.2-20220804-6354275")
+                    # Look for standalone version segment (pure digits and dots only)
+                    # This avoids matching OS versions like "centos7.5" or "ubuntu22.04"
                     if '-' in content:
                         parts = content.split('-')
                         for part in parts:
-                            # Look for version-like patterns (X.X.X)
-                            if '.' in part and any(c.isdigit() for c in part):
+                            # Check if this part is a pure version number (only digits and dots)
+                            if re.match(r'^\d+\.\d+(?:\.\d+)?$', part.strip()):
                                 version_parts = part.split('.')
-                                if len(version_parts) >= 2 and version_parts[0].isdigit():
-                                    return version_parts[0] + '.' + version_parts[1]
+                                # Return major.minor only
+                                return version_parts[0] + '.' + version_parts[1]
             except Exception:
                 pass
         
         # Try alternate approach: check directory name
+        # Look for version pattern with reasonable major version (6-9 for FreeSurfer)
         dir_name = os.path.basename(freesurfer_home.rstrip('/'))
-        if any(c.isdigit() for c in dir_name):
-            # Extract version from directory name like "freesurfer-7.3.2" or "7.3"
-            import re
-            match = re.search(r'(\d+\.\d+)', dir_name)
-            if match:
-                return match.group(1)
+        match = re.search(r'\b([6-9]\.\d+)(?:\.\d+)?\b', dir_name)
+        if match:
+            return match.group(1)
         
         return None
