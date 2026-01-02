@@ -264,9 +264,13 @@ class SettingsManager:
         # Try alternate approach: check directory name
         # Use class constants for version range
         dir_name = os.path.basename(freesurfer_home.rstrip('/'))
-        pattern = rf'\b([{self.FREESURFER_MIN_VERSION}-{self.FREESURFER_MAX_VERSION}]\.\d+)(?:\.\d+)?\b'
-        match = re.search(pattern, dir_name)
+        # Match version pattern and validate range
+        match = re.search(r'\b(\d+\.\d+)(?:\.\d+)?\b', dir_name)
         if match:
-            return match.group(1)
+            version = match.group(1)
+            # Validate major version is in expected range
+            major_version = int(version.split('.')[0])
+            if self.FREESURFER_MIN_VERSION <= major_version <= self.FREESURFER_MAX_VERSION:
+                return version
         
         return None
