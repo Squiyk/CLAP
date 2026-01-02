@@ -109,7 +109,7 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
     if isinstance(xfm_files, str):
         xfm_list = [xfm_files]
     else: 
-        xfm_list = [f. strip() for f in xfm_files if f.strip()]
+        xfm_list = [f.strip() for f in xfm_files if f.strip()]
 
     if isinstance(moving_image, list):
         has_failures = False

@@ -189,6 +189,7 @@ def display_connectome(paired_data, on_complete=None):
         fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 5*rows), squeeze=False)
         fig.canvas.manager.set_window_title('Connectome Viewer')
 
+        i = -1  # Initialize to handle empty paired_data case
         for i, (csv_path, lut_path) in enumerate(paired_data):
             row, col = i // cols, i % cols
             ax = axes[row, col]
@@ -223,8 +224,10 @@ def display_connectome(paired_data, on_complete=None):
             except Exception as e:
                 ax.text(0.5, 0.5, f"Error:\n{str(e)}", ha='center', va='center', color='red')
 
-        for j in range(i + 1, rows * cols):
-            fig.delaxes(axes[j // cols, j % cols])
+        # Only delete extra subplots if we had any data
+        if i >= 0:
+            for j in range(i + 1, rows * cols):
+                fig.delaxes(axes[j // cols, j % cols])
 
         plt.tight_layout()
         plt.show()
