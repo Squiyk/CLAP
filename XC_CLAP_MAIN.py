@@ -245,68 +245,65 @@ class CLAP(ctk.CTk):
     
     def _save_page_form_values(self, page_name):
         """Save all form values for a specific page before destroying it"""
-        if page_name == "registration":
-            # Clear previous registration values first
-            self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith('reg_')}
-            
-            # Save registration page fields
-            if hasattr(self, 'entry_destination_space'):
-                self._save_form_value('reg_destination_space', self.entry_destination_space)
-            if hasattr(self, 'entry_moving'):
-                self._save_form_value('reg_moving', self.entry_moving)
-            if hasattr(self, 'entry_output_reg'):
-                self._save_form_value('reg_output', self.entry_output_reg)
-            if hasattr(self, 'entry_moving_apply'):
-                self._save_form_value('reg_moving_apply', self.entry_moving_apply)
-            if hasattr(self, 'entry_transform_file'):
-                self._save_form_value('reg_transform_file', self.entry_transform_file)
-            if hasattr(self, 'entry_reference_apply'):
-                self._save_form_value('reg_reference_apply', self.entry_reference_apply)
-            if hasattr(self, 'entry_output_apply'):
-                self._save_form_value('reg_output_apply', self.entry_output_apply)
+        # Define field mappings for each page
+        page_field_mappings = {
+            "registration": {
+                "prefix": "reg_",
+                "fields": [
+                    ('reg_destination_space', 'entry_destination_space'),
+                    ('reg_moving', 'entry_moving'),
+                    ('reg_output', 'entry_output_reg'),
+                    ('reg_moving_apply', 'entry_moving_apply'),
+                    ('reg_transform_file', 'entry_transform_file'),
+                    ('reg_reference_apply', 'entry_reference_apply'),
+                    ('reg_output_apply', 'entry_output_apply'),
+                ]
+            },
+            "connectome": {
+                "prefix": "con_",
+                "fields": [
+                    ('con_mask_img', 'entry_mask_img_cntcm'),
+                    ('con_tracks', 'entry_tracks_cnctm'),
+                    ('con_tracks_weights', 'entry_tracks_cnctm_weights'),
+                    ('con_output', 'entry_output_cnctm'),
+                    ('con_sub_connectome', 'entry_sub_connectome'),
+                    ('con_ref_connectomes', 'entry_ref_connectomes'),
+                    ('con_output_zscore', 'entry_output_zscore_cnctm'),
+                    ('con_disp_cnctm', 'entry_disp_cnctm'),
+                    ('con_disp_lut', 'entry_disp_lut'),
+                ]
+            },
+            "roi": {
+                "prefix": "roi_",
+                "fields": [
+                    ('roi_ref_mask_img', 'entry_ref_mask_img'),
+                    ('roi_seeg_coords', 'entry_seeg_coords'),
+                    ('roi_output_dir', 'entry_output_roi_mask_dir'),
+                    ('roi_radius', 'sel_compute_radius'),
+                ]
+            }
+        }
         
-        elif page_name == "connectome":
-            # Clear previous connectome values first
-            self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith('con_')}
-            
-            # Save connectome page fields
-            if hasattr(self, 'entry_mask_img_cntcm'):
-                self._save_form_value('con_mask_img', self.entry_mask_img_cntcm)
-            if hasattr(self, 'entry_tracks_cnctm'):
-                self._save_form_value('con_tracks', self.entry_tracks_cnctm)
-            if hasattr(self, 'entry_tracks_cnctm_weights'):
-                self._save_form_value('con_tracks_weights', self.entry_tracks_cnctm_weights)
-            if hasattr(self, 'entry_output_cnctm'):
-                self._save_form_value('con_output', self.entry_output_cnctm)
-            if hasattr(self, 'entry_sub_connectome'):
-                self._save_form_value('con_sub_connectome', self.entry_sub_connectome)
-            if hasattr(self, 'entry_ref_connectomes'):
-                self._save_form_value('con_ref_connectomes', self.entry_ref_connectomes)
-            if hasattr(self, 'entry_output_zscore_cnctm'):
-                self._save_form_value('con_output_zscore', self.entry_output_zscore_cnctm)
-            if hasattr(self, 'entry_disp_cnctm'):
-                self._save_form_value('con_disp_cnctm', self.entry_disp_cnctm)
-            if hasattr(self, 'entry_disp_lut'):
-                self._save_form_value('con_disp_lut', self.entry_disp_lut)
+        if page_name not in page_field_mappings:
+            return
         
-        elif page_name == "roi":
-            # Clear previous ROI values first
-            self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith('roi_')}
-            
-            # Save ROI page fields
-            if hasattr(self, 'entry_ref_mask_img'):
-                self._save_form_value('roi_ref_mask_img', self.entry_ref_mask_img)
-            if hasattr(self, 'entry_seeg_coords'):
-                self._save_form_value('roi_seeg_coords', self.entry_seeg_coords)
-            if hasattr(self, 'entry_output_roi_mask_dir'):
-                self._save_form_value('roi_output_dir', self.entry_output_roi_mask_dir)
-            if hasattr(self, 'sel_compute_radius'):
-                self._save_form_value('roi_radius', self.sel_compute_radius)
-            if hasattr(self, 'sel_compute_mode_segbtn'):
-                try:
-                    self.form_values['roi_mode'] = self.sel_compute_mode_segbtn.get()
-                except Exception:
-                    pass
+        mapping = page_field_mappings[page_name]
+        
+        # Clear previous values for this page
+        self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith(mapping["prefix"])}
+        
+        # Save field values
+        for field_key, widget_attr in mapping["fields"]:
+            if hasattr(self, widget_attr):
+                self._save_form_value(field_key, getattr(self, widget_attr))
+        
+        # Special handling for ROI mode (SegmentedButton)
+        if page_name == "roi" and hasattr(self, 'sel_compute_mode_segbtn'):
+            try:
+                self.form_values['roi_mode'] = self.sel_compute_mode_segbtn.get()
+            except Exception:
+                pass
+
 
 
 #### Page Setups ####
