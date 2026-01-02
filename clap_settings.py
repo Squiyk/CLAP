@@ -42,15 +42,29 @@ class SettingsManager:
             try:
                 with open(self.settings_file, 'r') as f:
                     loaded = json.load(f)
-                    # Merge with defaults to ensure all keys exist
-                    settings = self.default_settings.copy()
-                    settings.update(loaded)
+                    # Deep merge loaded settings with defaults to ensure all keys exist
+                    # This preserves new keys added to default_settings in updates
+                    settings = self._deep_merge(self.default_settings.copy(), loaded)
                     return settings
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading settings: {e}. Using defaults.")
                 return self.default_settings.copy()
         else:
             return self.default_settings.copy()
+    
+    def _deep_merge(self, base, overlay):
+        """
+        Recursively merge overlay dict into base dict.
+        Preserves keys in base that don't exist in overlay.
+        """
+        import copy
+        result = copy.deepcopy(base)
+        for key, value in overlay.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+        return result
     
     def save_settings(self):
         """Save current settings to file"""
