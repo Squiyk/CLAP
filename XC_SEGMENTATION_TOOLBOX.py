@@ -224,6 +224,13 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
             on_complete()
         return
     
+    # Validate input image exists
+    if not os.path.exists(input_image):
+        print(f"ERROR: Input image not found: {input_image}")
+        if on_complete:
+            on_complete()
+        return
+    
     # Prepare environment
     env = os.environ.copy()
     
@@ -234,6 +241,19 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
     if license_file and os.path.exists(license_file):
         env['FS_LICENSE'] = license_file
         print(f"Using FreeSurfer license: {license_file}")
+    else:
+        print("WARNING: No valid FreeSurfer license file provided. Surface reconstruction may fail without a valid license.")
+    
+    # Set up FastSurfer environment variables
+    if fastsurfer_home and os.path.exists(fastsurfer_home):
+        env['FASTSURFER_HOME'] = fastsurfer_home
+        # Add FASTSURFER_HOME to PYTHONPATH
+        pythonpath = env.get('PYTHONPATH', '')
+        if pythonpath:
+            env['PYTHONPATH'] = fastsurfer_home + os.pathsep + pythonpath
+        else:
+            env['PYTHONPATH'] = fastsurfer_home
+        print(f"FastSurfer environment configured: {fastsurfer_home}")
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -292,6 +312,8 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
             print("Using Apple Silicon GPU (MPS) with fallback enabled")
         else:
             # Standard GPU mode (CUDA)
+            cmd.append("--device")
+            cmd.append("cuda")
             print("Using GPU acceleration (CUDA if available)")
     else:
         # CPU-only mode
@@ -312,15 +334,34 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
         print("This may take 1-3 hours with CPU...")
     
     try:
-        # Run FastSurfer
-        process = subprocess.Popen(
-            cmd,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            bufsize=1
-        )
+        # Check for FastSurfer virtual environment and activate it if it exists
+        venv_activate = None
+        if fastsurfer_home and os.path.exists(fastsurfer_home):
+            venv_activate = os.path.join(fastsurfer_home, 'venv', 'bin', 'activate')
+        
+        # Run FastSurfer with or without virtual environment activation
+        if venv_activate and os.path.exists(venv_activate):
+            # Wrap command in bash to source the virtual environment
+            bash_command = f"source {venv_activate} && {' '.join(cmd)}"
+            process = subprocess.Popen(
+                ['bash', '-c', bash_command],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=1
+            )
+            print(f"FastSurfer virtual environment activated: {venv_activate}")
+        else:
+            # Run directly without virtual environment activation
+            process = subprocess.Popen(
+                cmd,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=1
+            )
         
         # Monitor process and check for cancellation
         while True:
