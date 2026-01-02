@@ -24,6 +24,9 @@ class CLAP(ctk.CTk):
         self.current_task_thread = None
         self.current_task_id = None
         self.cancel_task_flag = False
+        
+        # Store form field values to preserve across page changes
+        self.form_values = {}
 
         self.title("CONNECT LAB ANALYSIS PIPELINE")
         self.geometry("1300x850")
@@ -195,12 +198,126 @@ class CLAP(ctk.CTk):
     def clear_main_pannel(self):
         for widget in self.main_pannel.winfo_children():
             widget.destroy()
+    
+    def _save_form_value(self, field_name, widget):
+        """Save the value of a form field"""
+        if widget is None:
+            return
+        
+        try:
+            # Handle different widget types
+            if hasattr(widget, 'get'):
+                value = widget.get()
+                # For textboxes, get returns method, need to call it
+                if callable(value):
+                    value = value("0.0", "end").strip()
+                self.form_values[field_name] = value
+        except Exception:
+            pass
+    
+    def _restore_form_value(self, field_name, widget):
+        """Restore the value of a form field"""
+        if field_name not in self.form_values or widget is None:
+            return
+        
+        try:
+            value = self.form_values[field_name]
+            if not value:
+                return
+            
+            # Handle different widget types
+            if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
+                # For Entry widgets
+                if hasattr(widget, 'get') and not callable(widget.get()):
+                    widget.delete(0, "end")
+                    widget.insert(0, value)
+                # For Textbox widgets
+                else:
+                    widget.delete("0.0", "end")
+                    widget.insert("0.0", value)
+        except Exception:
+            pass
+    
+    def _save_page_form_values(self, page_name):
+        """Save all form values for a specific page before destroying it"""
+        if page_name == "registration":
+            # Clear previous registration values first
+            keys_to_remove = [k for k in self.form_values.keys() if k.startswith('reg_')]
+            for key in keys_to_remove:
+                del self.form_values[key]
+            
+            # Save registration page fields
+            if hasattr(self, 'entry_destination_space'):
+                self._save_form_value('reg_destination_space', self.entry_destination_space)
+            if hasattr(self, 'entry_moving'):
+                self._save_form_value('reg_moving', self.entry_moving)
+            if hasattr(self, 'entry_output_reg'):
+                self._save_form_value('reg_output', self.entry_output_reg)
+            if hasattr(self, 'entry_moving_apply'):
+                self._save_form_value('reg_moving_apply', self.entry_moving_apply)
+            if hasattr(self, 'entry_transform_file'):
+                self._save_form_value('reg_transform_file', self.entry_transform_file)
+            if hasattr(self, 'entry_reference_apply'):
+                self._save_form_value('reg_reference_apply', self.entry_reference_apply)
+            if hasattr(self, 'entry_output_apply'):
+                self._save_form_value('reg_output_apply', self.entry_output_apply)
+        
+        elif page_name == "connectome":
+            # Clear previous connectome values first
+            keys_to_remove = [k for k in self.form_values.keys() if k.startswith('con_')]
+            for key in keys_to_remove:
+                del self.form_values[key]
+            
+            # Save connectome page fields
+            if hasattr(self, 'entry_mask_img_cntcm'):
+                self._save_form_value('con_mask_img', self.entry_mask_img_cntcm)
+            if hasattr(self, 'entry_tracks_cnctm'):
+                self._save_form_value('con_tracks', self.entry_tracks_cnctm)
+            if hasattr(self, 'entry_tracks_cnctm_weights'):
+                self._save_form_value('con_tracks_weights', self.entry_tracks_cnctm_weights)
+            if hasattr(self, 'entry_output_cnctm'):
+                self._save_form_value('con_output', self.entry_output_cnctm)
+            if hasattr(self, 'entry_sub_connectome'):
+                self._save_form_value('con_sub_connectome', self.entry_sub_connectome)
+            if hasattr(self, 'entry_ref_connectomes'):
+                self._save_form_value('con_ref_connectomes', self.entry_ref_connectomes)
+            if hasattr(self, 'entry_output_zscore_cnctm'):
+                self._save_form_value('con_output_zscore', self.entry_output_zscore_cnctm)
+            if hasattr(self, 'entry_disp_cnctm'):
+                self._save_form_value('con_disp_cnctm', self.entry_disp_cnctm)
+            if hasattr(self, 'entry_disp_lut'):
+                self._save_form_value('con_disp_lut', self.entry_disp_lut)
+        
+        elif page_name == "roi":
+            # Clear previous ROI values first
+            keys_to_remove = [k for k in self.form_values.keys() if k.startswith('roi_')]
+            for key in keys_to_remove:
+                del self.form_values[key]
+            
+            # Save ROI page fields
+            if hasattr(self, 'entry_ref_mask_img'):
+                self._save_form_value('roi_ref_mask_img', self.entry_ref_mask_img)
+            if hasattr(self, 'entry_seeg_coords'):
+                self._save_form_value('roi_seeg_coords', self.entry_seeg_coords)
+            if hasattr(self, 'entry_output_roi_mask_dir'):
+                self._save_form_value('roi_output_dir', self.entry_output_roi_mask_dir)
+            if hasattr(self, 'sel_compute_radius'):
+                self._save_form_value('roi_radius', self.sel_compute_radius)
+            if hasattr(self, 'sel_compute_mode_segbtn'):
+                try:
+                    self.form_values['roi_mode'] = self.sel_compute_mode_segbtn.get()
+                except Exception:
+                    pass
 
 
 #### Page Setups ####
 
     def setup_home_page(self):
-
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi"]:
+            self._save_page_form_values(last_page)
+        
         self.clear_main_pannel()
         self._save_current_page("home")
 
@@ -239,6 +356,10 @@ class CLAP(ctk.CTk):
 
 
     def setup_registration_tools_page(self):
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi"]:
+            self._save_page_form_values(last_page)
 
         # Remove previous page
         self.clear_main_pannel()
@@ -350,8 +471,21 @@ class CLAP(ctk.CTk):
         )
         run_apply_transform_btn.grid(row=5,column=0,columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
+        # Restore saved form values
+        self._restore_form_value('reg_destination_space', self.entry_destination_space)
+        self._restore_form_value('reg_moving', self.entry_moving)
+        self._restore_form_value('reg_output', self.entry_output_reg)
+        self._restore_form_value('reg_moving_apply', self.entry_moving_apply)
+        self._restore_form_value('reg_transform_file', self.entry_transform_file)
+        self._restore_form_value('reg_reference_apply', self.entry_reference_apply)
+        self._restore_form_value('reg_output_apply', self.entry_output_apply)
+
 
     def setup_connectome_toolbox_page(self):
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi"]:
+            self._save_page_form_values(last_page)
 
         # Remove previous page
         self.clear_main_pannel()
@@ -505,7 +639,23 @@ class CLAP(ctk.CTk):
         )
         run_disp_cnctm_btn.grid(row=3, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
+        # Restore saved form values
+        self._restore_form_value('con_mask_img', self.entry_mask_img_cntcm)
+        self._restore_form_value('con_tracks', self.entry_tracks_cnctm)
+        self._restore_form_value('con_tracks_weights', self.entry_tracks_cnctm_weights)
+        self._restore_form_value('con_output', self.entry_output_cnctm)
+        self._restore_form_value('con_sub_connectome', self.entry_sub_connectome)
+        self._restore_form_value('con_ref_connectomes', self.entry_ref_connectomes)
+        self._restore_form_value('con_output_zscore', self.entry_output_zscore_cnctm)
+        self._restore_form_value('con_disp_cnctm', self.entry_disp_cnctm)
+        self._restore_form_value('con_disp_lut', self.entry_disp_lut)
+
+
     def setup_ROI_toolbox_page(self):
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi"]:
+            self._save_page_form_values(last_page)
 
         # Remove previous page
         self.clear_main_pannel()
@@ -620,9 +770,25 @@ class CLAP(ctk.CTk):
         )
         run_seeg_roi_mask_tool_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
         
+        # Restore saved form values
+        self._restore_form_value('roi_ref_mask_img', self.entry_ref_mask_img)
+        self._restore_form_value('roi_seeg_coords', self.entry_seeg_coords)
+        self._restore_form_value('roi_output_dir', self.entry_output_roi_mask_dir)
+        self._restore_form_value('roi_radius', self.sel_compute_radius)
+        if 'roi_mode' in self.form_values:
+            try:
+                self.sel_compute_mode_segbtn.set(self.form_values['roi_mode'])
+            except Exception:
+                pass
+
 
     def setup_settings_page(self):
         """Setup the settings page"""
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi"]:
+            self._save_page_form_values(last_page)
+        
         self.clear_main_pannel()
         self._save_current_page("settings")
         
@@ -767,6 +933,11 @@ class CLAP(ctk.CTk):
 
     def setup_history_page(self):
         """Setup the task history page"""
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi"]:
+            self._save_page_form_values(last_page)
+        
         self.clear_main_pannel()
         self._save_current_page("history")
         
