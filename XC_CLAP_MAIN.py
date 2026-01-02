@@ -1075,7 +1075,7 @@ class CLAP(ctk.CTk):
             border_width=1,
             border_color=("#E0E0E0", "#404040")
         )
-        deps_frame.grid(row=1, column=0, pady=20, padx=20, sticky="ew")
+        deps_frame.grid(row=2, column=0, pady=20, padx=20, sticky="ew")
         deps_frame.columnconfigure(1, weight=1)
         
         deps_label = ctk.CTkLabel(
@@ -1230,7 +1230,7 @@ class CLAP(ctk.CTk):
             border_width=1,
             border_color=("#E0E0E0", "#404040")
         )
-        appearance_frame.grid(row=2, column=0, pady=20, padx=20, sticky="ew")
+        appearance_frame.grid(row=1, column=0, pady=20, padx=20, sticky="ew")
         appearance_frame.columnconfigure(1, weight=1)
         
         appearance_label = ctk.CTkLabel(
