@@ -56,13 +56,14 @@ def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_che
         for img_path in input_images:
             img_path = img_path.strip()
             if img_path and os.path.exists(img_path):
+                cmd.append("-v")  # Add the -v flag for volume files
                 cmd.append(img_path)
     
     # Launch freeview even without images (user can load manually)
     if len(cmd) == 1:
         print("Launching freeview without pre-loaded images (load manually)...")
     else:
-        print(f"Launching freeview with {len(cmd)-1} image(s)...")
+        print(f"Launching freeview with {(len(cmd)-1)//2} image(s)...")
     
     try:
         # Launch freeview as a detached process
