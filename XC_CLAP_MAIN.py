@@ -91,6 +91,38 @@ class CLAP(ctk.CTk):
         
         self.sidebar_btn_3 = ctk.CTkButton(sidebar_button_card, text="History 📋", fg_color="#0078D7", command=self.setup_history_page)
         self.sidebar_btn_3.grid(row=3, column=0, padx=5, pady=10)
+        
+        # Task status frame (appears when task is running)
+        self.task_status_frame = ctk.CTkFrame(
+            sidebar_button_card,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        
+        self.task_status_label = ctk.CTkLabel(
+            self.task_status_frame,
+            text="Task Running...",
+            font=ctk.CTkFont(family="Proxima Nova", size=12, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        self.task_status_label.pack(padx=10, pady=(10, 5))
+        
+        self.task_progress_bar = ctk.CTkProgressBar(
+            self.task_status_frame,
+            mode="indeterminate"
+        )
+        self.task_progress_bar.pack(padx=10, pady=5, fill="x")
+        
+        self.cancel_task_btn = ctk.CTkButton(
+            self.task_status_frame,
+            text="Cancel Task",
+            fg_color="#DC3545",
+            hover_color="#C82333",
+            command=self.cancel_current_task
+        )
+        self.cancel_task_btn.pack(padx=10, pady=(5, 10), fill="x")
 
         #### Populating main pannel ####
         self.main_pannel = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -132,6 +164,27 @@ class CLAP(ctk.CTk):
     def _save_current_page(self, page_name):
         """Save current page to settings"""
         self.settings_manager.set("last_page", page_name)
+    
+    def _show_task_status(self, task_name):
+        """Show task status frame and start progress bar"""
+        self.task_status_label.configure(text=f"Running: {task_name}")
+        self.task_status_frame.grid(row=4, column=0, padx=5, pady=10, sticky="ew")
+        self.task_progress_bar.start()
+    
+    def _hide_task_status(self):
+        """Hide task status frame and stop progress bar"""
+        self.task_progress_bar.stop()
+        self.task_status_frame.grid_forget()
+    
+    def cancel_current_task(self):
+        """Cancel the currently running task"""
+        if self.current_task_id is not None:
+            self.cancel_task_flag = True
+            self.task_logger.complete_task(self.current_task_id, "interrupted", "User cancelled")
+            self.current_task_id = None
+            self.current_task_thread = None
+            self._hide_task_status()
+            messagebox.showinfo("Task Cancelled", "The current task has been cancelled.")
 
     def clear_main_pannel(self):
         for widget in self.main_pannel.winfo_children():
@@ -1020,6 +1073,9 @@ class CLAP(ctk.CTk):
             output_location=out
         )
         
+        self._show_task_status("New Registration")
+        self.cancel_task_flag = False
+        
         task = threading.Thread(target=XC_XFM_TOOLBOX.new_xfm, args=(out, fixed, moving_list, self.on_registration_complete))
         self.current_task_thread = task
         task.start()
@@ -1030,6 +1086,7 @@ class CLAP(ctk.CTk):
             self.task_logger.complete_task(self.current_task_id, "completed")
             self.current_task_id = None
         self.current_task_thread = None
+        self._hide_task_status()
         self.after(0,self.show_new_registration_complete_message)
 
     def show_new_registration_complete_message(self):
@@ -1059,6 +1116,9 @@ class CLAP(ctk.CTk):
                 input_files=moving_list + transform_list + [reference],
                 output_location=out_dir
             )
+            
+            self._show_task_status("Apply Transform")
+            self.cancel_task_flag = False
 
             task = threading.Thread(target=XC_XFM_TOOLBOX.apply_existing_xfm, args=(out_dir, transform_list, moving_list, reference, self.on_apply_transform_complete))
             self.current_task_thread = task
@@ -1070,6 +1130,7 @@ class CLAP(ctk.CTk):
             self.task_logger.complete_task(self.current_task_id, "completed")
             self.current_task_id = None
         self.current_task_thread = None
+        self._hide_task_status()
         self.after(0,self.show_apply_transform_complete_message)
         
     def show_apply_transform_complete_message(self):
@@ -1102,6 +1163,9 @@ class CLAP(ctk.CTk):
             input_files=[mask_image] + tracks_list + tracks_weights_list,
             output_location=output_dir
         )
+        
+        self._show_task_status("Generate Connectomes")
+        self.cancel_task_flag = False
 
         task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete))
         self.current_task_thread = task
@@ -1113,6 +1177,7 @@ class CLAP(ctk.CTk):
             self.task_logger.complete_task(self.current_task_id, "completed")
             self.current_task_id = None
         self.current_task_thread = None
+        self._hide_task_status()
         self.after(0,self.show_connectome_complete_message)
 
     def show_connectome_complete_message(self):
@@ -1137,6 +1202,9 @@ class CLAP(ctk.CTk):
             input_files=[subject_connectome] + ref_connectomes_list,
             output_location=output_dir
         )
+        
+        self._show_task_status("Z-Score Connectome")
+        self.cancel_task_flag = False
 
         task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete))
         self.current_task_thread = task
@@ -1148,6 +1216,7 @@ class CLAP(ctk.CTk):
             self.task_logger.complete_task(self.current_task_id, "completed")
             self.current_task_id = None
         self.current_task_thread = None
+        self._hide_task_status()
         self.after(0,self.show_z_score_complete_message)
 
     def show_z_score_complete_message(self):
@@ -1172,6 +1241,9 @@ class CLAP(ctk.CTk):
             input_files=cnctms_list + luts_list,
             output_location="Display only"
         )
+        
+        self._show_task_status("Display Connectomes")
+        self.cancel_task_flag = False
         
         lut_map = {}
         for lut in luts_list:
@@ -1200,6 +1272,7 @@ class CLAP(ctk.CTk):
             self.task_logger.complete_task(self.current_task_id, "completed")
             self.current_task_id = None
         self.current_task_thread = None
+        self._hide_task_status()
         self.after(0,self.show_display_complete_message)
 
     def show_display_complete_message(self):
@@ -1233,6 +1306,9 @@ class CLAP(ctk.CTk):
             input_files=[ref_mask_img, seeg_coords_file],
             output_location=output_dir
         )
+        
+        self._show_task_status("Generate SEEG ROI Masks")
+        self.cancel_task_flag = False
 
         task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete))
         self.current_task_thread = task
@@ -1244,6 +1320,7 @@ class CLAP(ctk.CTk):
             self.task_logger.complete_task(self.current_task_id, "completed")
             self.current_task_id = None
         self.current_task_thread = None
+        self._hide_task_status()
         self.after(0,self.show_seeg_roi_mask_complete_message)
 
     def show_seeg_roi_mask_complete_message(self):
