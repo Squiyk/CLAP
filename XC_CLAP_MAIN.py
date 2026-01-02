@@ -943,7 +943,7 @@ class CLAP(ctk.CTk):
         # Label for tool
         fastsurfer_label = ctk.CTkLabel(
             fastsurfer_frame,
-            text="Run FastSurfer (Deep Learning Alternative)",
+            text="Run FastSurfer",
             font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
         )
