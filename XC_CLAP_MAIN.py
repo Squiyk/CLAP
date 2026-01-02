@@ -1314,6 +1314,8 @@ class CLAP(ctk.CTk):
         # Detect available FreeSurfer installations
         self.freesurfer_installations = self.settings_manager.detect_freesurfer_installations()
         fs_labels = [label for label, path in self.freesurfer_installations]
+        # Add "Custom Path..." option
+        fs_labels.append("Custom Path...")
         
         self.freesurfer_version_menu = ctk.CTkOptionMenu(
             freesurfer_config_frame,
@@ -1324,7 +1326,8 @@ class CLAP(ctk.CTk):
             button_hover_color=("#005A9E", "#005A9E"),
             dropdown_fg_color=("white", "#2B2B2B"),
             text_color=("black", "white"),
-            font=ctk.CTkFont(family="Proxima Nova", size=14)
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=self.on_freesurfer_version_changed
         )
         
         # Set current value
@@ -1335,8 +1338,51 @@ class CLAP(ctk.CTk):
             if path == current_fs_for_fastsurfer:
                 selected_label = label
                 break
+        # Check if current path is a custom path (not in detected installations)
+        if current_fs_for_fastsurfer and selected_label == fs_labels[0] and current_fs_for_fastsurfer != self.freesurfer_installations[0][1]:
+            selected_label = "Custom Path..."
+        
         self.freesurfer_version_menu.set(selected_label)
         self.freesurfer_version_menu.grid(row=2, column=1, columnspan=2, padx=(10, 20), pady=10, sticky="ew")
+        
+        # Custom FreeSurfer path entry (initially hidden)
+        self.custom_fs_label = ctk.CTkLabel(
+            freesurfer_config_frame,
+            text="Custom Path:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        
+        self.custom_fs_entry = ctk.CTkEntry(
+            freesurfer_config_frame,
+            height=35,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        
+        self.custom_fs_browse_btn = ctk.CTkButton(
+            freesurfer_config_frame,
+            text="...",
+            width=40,
+            height=35,
+            fg_color=("#F0F0F0", "#3A3A3A"),
+            text_color=("black", "white"),
+            hover_color=("#D9D9D9", "#505050"),
+            command=self.browse_custom_freesurfer
+        )
+        
+        # Show custom path entry if "Custom Path..." is selected
+        if selected_label == "Custom Path...":
+            self.custom_fs_label.grid(row=3, column=0, padx=(20, 10), pady=10, sticky="w")
+            if current_fs_for_fastsurfer:
+                self.custom_fs_entry.insert(0, current_fs_for_fastsurfer)
+            self.custom_fs_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
+            self.custom_fs_browse_btn.grid(row=3, column=2, padx=(0, 20), pady=10)
+            save_btn_row = 4
+        else:
+            save_btn_row = 3
         
         # Save FreeSurfer Settings Button
         save_fs_settings_btn = ctk.CTkButton(
@@ -1347,7 +1393,7 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             command=self.save_freesurfer_settings
         )
-        save_fs_settings_btn.grid(row=3, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+        save_fs_settings_btn.grid(row=save_btn_row, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
 
 
     def setup_history_page(self):
@@ -2108,6 +2154,26 @@ class CLAP(ctk.CTk):
             self.freesurfer_license_entry.delete(0, ctk.END)
             self.freesurfer_license_entry.insert(0, path)
     
+    def on_freesurfer_version_changed(self, selected_value):
+        """Handle FreeSurfer version dropdown change"""
+        if selected_value == "Custom Path...":
+            # Show custom path entry
+            self.custom_fs_label.grid(row=3, column=0, padx=(20, 10), pady=10, sticky="w")
+            self.custom_fs_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
+            self.custom_fs_browse_btn.grid(row=3, column=2, padx=(0, 20), pady=10)
+        else:
+            # Hide custom path entry
+            self.custom_fs_label.grid_forget()
+            self.custom_fs_entry.grid_forget()
+            self.custom_fs_browse_btn.grid_forget()
+    
+    def browse_custom_freesurfer(self):
+        """Browse for custom FreeSurfer installation directory"""
+        path = filedialog.askdirectory(title="Select FreeSurfer Installation Directory")
+        if path:
+            self.custom_fs_entry.delete(0, ctk.END)
+            self.custom_fs_entry.insert(0, path)
+    
     def save_freesurfer_settings(self):
         """Save FreeSurfer configuration settings"""
         license_path = self.freesurfer_license_entry.get().strip()
@@ -2115,12 +2181,18 @@ class CLAP(ctk.CTk):
         
         # Save FreeSurfer version selection for FastSurfer
         selected_label = self.freesurfer_version_menu.get()
-        # Find the path corresponding to the selected label
-        selected_path = ""
-        for label, path in self.freesurfer_installations:
-            if label == selected_label:
-                selected_path = path
-                break
+        
+        if selected_label == "Custom Path...":
+            # Use custom path from entry
+            selected_path = self.custom_fs_entry.get().strip()
+        else:
+            # Find the path corresponding to the selected label
+            selected_path = ""
+            for label, path in self.freesurfer_installations:
+                if label == selected_label:
+                    selected_path = path
+                    break
+        
         self.settings_manager.set("external_dependencies.freesurfer_for_fastsurfer", selected_path)
         
         messagebox.showinfo("Success", "FreeSurfer settings saved successfully")
