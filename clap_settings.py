@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import re
+import copy
 
 class SettingsManager:
     """Manages user settings and configuration for CLAP application"""
@@ -56,14 +57,28 @@ class SettingsManager:
         """
         Recursively merge overlay dict into base dict.
         Preserves keys in base that don't exist in overlay.
+        Optimized to only deep copy when necessary.
         """
-        import copy
-        result = copy.deepcopy(base)
-        for key, value in overlay.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = self._deep_merge(result[key], value)
+        result = {}
+        # Start with all keys from base
+        for key in base:
+            if key in overlay:
+                # Key exists in both - need to merge
+                if isinstance(base[key], dict) and isinstance(overlay[key], dict):
+                    # Both are dicts - recursively merge
+                    result[key] = self._deep_merge(base[key], overlay[key])
+                else:
+                    # Use overlay value
+                    result[key] = overlay[key]
             else:
-                result[key] = value
+                # Key only in base - preserve it
+                result[key] = copy.deepcopy(base[key]) if isinstance(base[key], (dict, list)) else base[key]
+        
+        # Add any keys that are only in overlay
+        for key in overlay:
+            if key not in base:
+                result[key] = overlay[key]
+        
         return result
     
     def save_settings(self):
