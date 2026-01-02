@@ -57,8 +57,12 @@ class SettingsManager:
         """
         Recursively merge overlay dict into base dict.
         Preserves keys in base that don't exist in overlay.
-        Optimized to only deep copy when necessary.
+        Deep copies mutable structures to prevent shared references.
         """
+        def _copy_if_mutable(value):
+            """Helper to deep copy mutable structures, shallow copy immutables"""
+            return copy.deepcopy(value) if isinstance(value, (dict, list)) else value
+        
         result = {}
         # Start with all keys from base
         for key in base:
@@ -68,17 +72,17 @@ class SettingsManager:
                     # Both are dicts - recursively merge
                     result[key] = self._deep_merge(base[key], overlay[key])
                 else:
-                    # Use overlay value (by reference for immutable, copy for mutable)
-                    result[key] = copy.deepcopy(overlay[key]) if isinstance(overlay[key], (dict, list)) else overlay[key]
+                    # Use overlay value, copying if mutable
+                    result[key] = _copy_if_mutable(overlay[key])
             else:
-                # Key only in base - preserve it (by reference since base is already a copy)
-                result[key] = base[key]
+                # Key only in base - preserve it, copying if mutable to prevent shared refs
+                result[key] = _copy_if_mutable(base[key])
         
         # Add any keys that are only in overlay
         for key in overlay:
             if key not in base:
                 # Copy mutable structures to avoid shared references
-                result[key] = copy.deepcopy(overlay[key]) if isinstance(overlay[key], (dict, list)) else overlay[key]
+                result[key] = _copy_if_mutable(overlay[key])
         
         return result
     
