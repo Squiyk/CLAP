@@ -2,12 +2,47 @@ import os
 import subprocess
 from pathlib import Path
 
+def extract_subject_id_from_filename(filepath):
+    """
+    Extract subject ID from filename by taking the first part before underscore or hyphen.
+    
+    Examples:
+        sub-01_trial_ses-01_T1w.nii -> sub-01
+        subject001_T1.nii.gz -> subject001
+        patient-123_session1_T1w.nii -> patient-123
+    
+    Args:
+        filepath: Path to the file
+    
+    Returns:
+        Subject ID string (first part of filename before _ or entire filename if no separator)
+    """
+    if not filepath:
+        return ""
+    
+    # Get filename without extension
+    filename = Path(filepath).name
+    
+    # Remove common extensions
+    for ext in ['.nii.gz', '.nii', '.mgz']:
+        if filename.endswith(ext):
+            filename = filename[:-len(ext)]
+            break
+    
+    # Split by underscore and take first part
+    if '_' in filename:
+        return filename.split('_')[0]
+    
+    # If no underscore, return the whole filename
+    return filename
+
+
 def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_checker=None):
     """
     Launch FreeSurfer's freeview with specified input images
     
     Args:
-        input_images: List of image paths to open in freeview
+        input_images: List of image paths to open in freeview (can be empty to launch without images)
         working_dir: Working directory (optional, used for context)
         on_complete: Callback function to call when complete
         cancel_checker: Function that returns True if task should be cancelled
@@ -17,27 +52,21 @@ def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_che
         print("Freeview launch cancelled by user")
         return
     
-    if not input_images:
-        print("No input images specified for freeview")
-        if on_complete:
-            on_complete()
-        return
-    
     # Build freeview command
     cmd = ["freeview"]
     
-    for img_path in input_images:
-        img_path = img_path.strip()
-        if img_path and os.path.exists(img_path):
-            cmd.append(img_path)
+    # Add images if provided
+    if input_images:
+        for img_path in input_images:
+            img_path = img_path.strip()
+            if img_path and os.path.exists(img_path):
+                cmd.append(img_path)
     
-    if len(cmd) == 1:  # Only "freeview" in command, no valid images
-        print("No valid images found to display in freeview")
-        if on_complete:
-            on_complete()
-        return
-    
-    print(f"Launching freeview with {len(cmd)-1} image(s)...")
+    # Launch freeview even without images (user can load manually)
+    if len(cmd) == 1:
+        print("Launching freeview without pre-loaded images (load manually)...")
+    else:
+        print(f"Launching freeview with {len(cmd)-1} image(s)...")
     
     try:
         # Launch freeview as a detached process

@@ -878,10 +878,38 @@ class CLAP(ctk.CTk):
 
         # Select input T1 image
         self.entry_recon_input, recon_input_btn = self.createrow(recon_all_frame, 1, "Input T1 Image:")
-        recon_input_btn.configure(command=lambda: self.browse_file(self.entry_recon_input))
+        recon_input_btn.configure(command=lambda: self.browse_file_and_update_subject_id(self.entry_recon_input, self.entry_recon_subject_id))
 
-        # Subject ID
-        self.entry_recon_subject_id, _ = self.createrow(recon_all_frame, 2, "Subject ID:")
+        # Subject ID with auto-fill button
+        lbl_recon_subj = ctk.CTkLabel(
+            recon_all_frame,
+            text="Subject ID:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        lbl_recon_subj.grid(row=2, column=0, padx=(20,10), pady=10, sticky="w")
+
+        self.entry_recon_subject_id = ctk.CTkEntry(
+            recon_all_frame,
+            height=35,
+            border_color=("#D0D0D0", "#505050"), 
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        self.entry_recon_subject_id.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+
+        auto_fill_recon_btn = ctk.CTkButton(
+            recon_all_frame,
+            text="Auto-fill",
+            width=80,
+            height=35,
+            fg_color=("#F0F0F0", "#3A3A3A"),
+            text_color=("black", "white"),
+            hover_color=("#D9D9D9", "#505050"),
+            command=lambda: self.auto_fill_subject_id(self.entry_recon_input, self.entry_recon_subject_id)
+        )
+        auto_fill_recon_btn.grid(row=2, column=2, padx=(0,20), pady=10)
 
         # Select output directory (SUBJECTS_DIR)
         self.entry_recon_output, recon_output_btn = self.createrow(recon_all_frame, 3, "Output Directory (SUBJECTS_DIR):")
@@ -923,10 +951,38 @@ class CLAP(ctk.CTk):
 
         # Select input T1 image
         self.entry_fastsurfer_input, fastsurfer_input_btn = self.createrow(fastsurfer_frame, 1, "Input T1 Image:")
-        fastsurfer_input_btn.configure(command=lambda: self.browse_file(self.entry_fastsurfer_input))
+        fastsurfer_input_btn.configure(command=lambda: self.browse_file_and_update_subject_id(self.entry_fastsurfer_input, self.entry_fastsurfer_subject_id))
 
-        # Subject ID
-        self.entry_fastsurfer_subject_id, _ = self.createrow(fastsurfer_frame, 2, "Subject ID:")
+        # Subject ID with auto-fill button
+        lbl_fastsurfer_subj = ctk.CTkLabel(
+            fastsurfer_frame,
+            text="Subject ID:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        lbl_fastsurfer_subj.grid(row=2, column=0, padx=(20,10), pady=10, sticky="w")
+
+        self.entry_fastsurfer_subject_id = ctk.CTkEntry(
+            fastsurfer_frame,
+            height=35,
+            border_color=("#D0D0D0", "#505050"), 
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        self.entry_fastsurfer_subject_id.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+
+        auto_fill_fastsurfer_btn = ctk.CTkButton(
+            fastsurfer_frame,
+            text="Auto-fill",
+            width=80,
+            height=35,
+            fg_color=("#F0F0F0", "#3A3A3A"),
+            text_color=("black", "white"),
+            hover_color=("#D9D9D9", "#505050"),
+            command=lambda: self.auto_fill_subject_id(self.entry_fastsurfer_input, self.entry_fastsurfer_subject_id)
+        )
+        auto_fill_fastsurfer_btn.grid(row=2, column=2, padx=(0,20), pady=10)
 
         # Select output directory (SUBJECTS_DIR)
         self.entry_fastsurfer_output, fastsurfer_output_btn = self.createrow(fastsurfer_frame, 3, "Output Directory (SUBJECTS_DIR):")
@@ -1407,6 +1463,32 @@ class CLAP(ctk.CTk):
 
 
 # Critical functionality
+    def browse_file_and_update_subject_id(self, entry_widget, subject_id_widget):
+        """Browse for a file and auto-populate subject ID from filename"""
+        path = filedialog.askopenfilename()
+        if path:
+            entry_widget.delete(0, ctk.END)
+            entry_widget.insert(0, path)
+            # Auto-populate subject ID
+            subject_id = XC_SEGMENTATION_TOOLBOX.extract_subject_id_from_filename(path)
+            if subject_id:
+                subject_id_widget.delete(0, ctk.END)
+                subject_id_widget.insert(0, subject_id)
+    
+    def auto_fill_subject_id(self, input_entry_widget, subject_id_widget):
+        """Auto-fill subject ID from the input filename"""
+        input_path = input_entry_widget.get().strip()
+        if input_path:
+            subject_id = XC_SEGMENTATION_TOOLBOX.extract_subject_id_from_filename(input_path)
+            if subject_id:
+                subject_id_widget.delete(0, ctk.END)
+                subject_id_widget.insert(0, subject_id)
+            else:
+                messagebox.showwarning("Auto-fill", "Could not extract subject ID from filename")
+        else:
+            messagebox.showwarning("Auto-fill", "Please select an input image first")
+
+# Critical functionality
     def resource_path(self, relative_path):
             try:
                 base_path = Path(sys._MEIPASS)
@@ -1754,16 +1836,19 @@ class CLAP(ctk.CTk):
         raw_images = self.entry_freeview_images.get("0.0", "end")
         images_list = [line.strip() for line in raw_images.split("\n") if line.strip()]
 
+        # Allow launching without images (user can load manually)
         if not images_list:
-            messagebox.showerror("Input Error", "Please select at least one image to view.")
-            return
+            images_list = []
+            description = "No images (manual loading)"
+        else:
+            description = f"{len(images_list)} image(s)"
         
         # Log task start
         self.current_task_id = self.task_logger.start_task(
             "Launch Freeview",
             "Segmentation",
-            f"{len(images_list)} image(s)",
-            input_files=images_list,
+            description,
+            input_files=images_list if images_list else [],
             output_location="Display only"
         )
         
