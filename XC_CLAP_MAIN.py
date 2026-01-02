@@ -8,6 +8,7 @@ from datetime import datetime
 import XC_XFM_TOOLBOX
 import XC_CONNECTOME_TOOLBOX
 import XC_ROI_TOOLBOX
+import XC_SEGMENTATION_TOOLBOX
 import pygame
 from clap_settings import SettingsManager
 from clap_task_logger import TaskLogger
@@ -85,6 +86,9 @@ class CLAP(ctk.CTk):
 
         self.tools_btn_roi = ctk.CTkButton(self.tools_drawer, text="ROI Parcelation Toolbox", command=self.setup_ROI_toolbox_page)
         self.tools_btn_roi.pack(fill="x", padx=10, pady=5)
+
+        self.tools_btn_segmentation = ctk.CTkButton(self.tools_drawer, text="Segmentation Toolbox", command=self.setup_segmentation_toolbox_page)
+        self.tools_btn_segmentation.pack(fill="x", padx=10, pady=5)
         
         # Bottom buttons (Tools, Settings, History)
         self.sidebar_btn_tools = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
@@ -159,6 +163,7 @@ class CLAP(ctk.CTk):
             "registration": self.setup_registration_tools_page,
             "connectome": self.setup_connectome_toolbox_page,
             "roi": self.setup_ROI_toolbox_page,
+            "segmentation": self.setup_segmentation_toolbox_page,
             "settings": self.setup_settings_page,
             "history": self.setup_history_page
         }
@@ -281,6 +286,18 @@ class CLAP(ctk.CTk):
                     ('roi_output_dir', 'entry_output_roi_mask_dir'),
                     ('roi_radius', 'sel_compute_radius'),
                 ]
+            },
+            "segmentation": {
+                "prefix": "seg_",
+                "fields": [
+                    ('seg_freeview_images', 'entry_freeview_images'),
+                    ('seg_recon_input', 'entry_recon_input'),
+                    ('seg_recon_subject_id', 'entry_recon_subject_id'),
+                    ('seg_recon_output', 'entry_recon_output'),
+                    ('seg_fastsurfer_input', 'entry_fastsurfer_input'),
+                    ('seg_fastsurfer_subject_id', 'entry_fastsurfer_subject_id'),
+                    ('seg_fastsurfer_output', 'entry_fastsurfer_output'),
+                ]
             }
         }
         
@@ -311,7 +328,7 @@ class CLAP(ctk.CTk):
     def setup_home_page(self):
         # Save current page values before clearing
         last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi"]:
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -354,7 +371,7 @@ class CLAP(ctk.CTk):
     def setup_registration_tools_page(self):
         # Save current page values before clearing
         last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi"]:
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
             self._save_page_form_values(last_page)
 
         # Remove previous page
@@ -480,7 +497,7 @@ class CLAP(ctk.CTk):
     def setup_connectome_toolbox_page(self):
         # Save current page values before clearing
         last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi"]:
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
             self._save_page_form_values(last_page)
 
         # Remove previous page
@@ -650,7 +667,7 @@ class CLAP(ctk.CTk):
     def setup_ROI_toolbox_page(self):
         # Save current page values before clearing
         last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi"]:
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
             self._save_page_form_values(last_page)
 
         # Remove previous page
@@ -778,11 +795,169 @@ class CLAP(ctk.CTk):
                 pass
 
 
+    def setup_segmentation_toolbox_page(self):
+        """Setup the segmentation toolbox page for FreeSurfer/FastSurfer"""
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+            self._save_page_form_values(last_page)
+
+        # Remove previous page
+        self.clear_main_pannel()
+        self._save_current_page("segmentation")
+
+        # Close tool menu
+        self.tools_drawer.grid_forget()
+        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+
+        # Setup new page
+        self.segmentation_toolbox_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
+        self.segmentation_toolbox_page.pack(fill="both", expand=True)
+
+        self.segmentation_toolbox_page.columnconfigure(0, weight=1)
+
+        # Launch Freeview Tool #
+
+        # Frame for tool
+        freeview_frame = ctk.CTkFrame(
+            self.segmentation_toolbox_page,
+            fg_color=("white","#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        freeview_frame.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
+        freeview_frame.columnconfigure(1, weight=1)
+
+        # Label for tool
+        freeview_label = ctk.CTkLabel(
+            freeview_frame,
+            text="Launch FreeSurfer Freeview",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        freeview_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
+
+        # Select images to view
+        self.entry_freeview_images, freeview_images_btn = self.createrow(freeview_frame, 1, "Image(s) to view:", use_textbox=True)
+        freeview_images_btn.configure(command=lambda: self.browse_files(self.entry_freeview_images))
+
+        # Launch freeview button
+        launch_freeview_btn = ctk.CTkButton(
+            freeview_frame,
+            text="LAUNCH FREEVIEW",
+            height=45,
+            fg_color="#6A5ACD",
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
+            command=lambda: self.start_freeview_thread()
+        )
+        launch_freeview_btn.grid(row=2, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
+
+
+        # Run FreeSurfer recon-all Tool #
+
+        # Frame for tool
+        recon_all_frame = ctk.CTkFrame(
+            self.segmentation_toolbox_page,
+            fg_color=("white","#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        recon_all_frame.grid(row=1, column=0, padx=20, pady=20, sticky="ew")
+        recon_all_frame.columnconfigure(1, weight=1)
+
+        # Label for tool
+        recon_all_label = ctk.CTkLabel(
+            recon_all_frame,
+            text="Run FreeSurfer recon-all",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        recon_all_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
+
+        # Select input T1 image
+        self.entry_recon_input, recon_input_btn = self.createrow(recon_all_frame, 1, "Input T1 Image:")
+        recon_input_btn.configure(command=lambda: self.browse_file(self.entry_recon_input))
+
+        # Subject ID
+        self.entry_recon_subject_id, _ = self.createrow(recon_all_frame, 2, "Subject ID:")
+
+        # Select output directory (SUBJECTS_DIR)
+        self.entry_recon_output, recon_output_btn = self.createrow(recon_all_frame, 3, "Output Directory (SUBJECTS_DIR):")
+        recon_output_btn.configure(command=lambda: self.browse_folder(self.entry_recon_output))
+
+        # Run recon-all button
+        run_recon_all_btn = ctk.CTkButton(
+            recon_all_frame,
+            text="RUN RECON-ALL",
+            height=45,
+            fg_color="#6A5ACD",
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
+            command=lambda: self.start_recon_all_thread()
+        )
+        run_recon_all_btn.grid(row=4, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
+
+
+        # Run FastSurfer Tool #
+
+        # Frame for tool
+        fastsurfer_frame = ctk.CTkFrame(
+            self.segmentation_toolbox_page,
+            fg_color=("white","#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        fastsurfer_frame.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
+        fastsurfer_frame.columnconfigure(1, weight=1)
+
+        # Label for tool
+        fastsurfer_label = ctk.CTkLabel(
+            fastsurfer_frame,
+            text="Run FastSurfer (Deep Learning Alternative)",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        fastsurfer_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20,10), sticky="w")
+
+        # Select input T1 image
+        self.entry_fastsurfer_input, fastsurfer_input_btn = self.createrow(fastsurfer_frame, 1, "Input T1 Image:")
+        fastsurfer_input_btn.configure(command=lambda: self.browse_file(self.entry_fastsurfer_input))
+
+        # Subject ID
+        self.entry_fastsurfer_subject_id, _ = self.createrow(fastsurfer_frame, 2, "Subject ID:")
+
+        # Select output directory (SUBJECTS_DIR)
+        self.entry_fastsurfer_output, fastsurfer_output_btn = self.createrow(fastsurfer_frame, 3, "Output Directory (SUBJECTS_DIR):")
+        fastsurfer_output_btn.configure(command=lambda: self.browse_folder(self.entry_fastsurfer_output))
+
+        # Run FastSurfer button
+        run_fastsurfer_btn = ctk.CTkButton(
+            fastsurfer_frame,
+            text="RUN FASTSURFER",
+            height=45,
+            fg_color="#6A5ACD",
+            font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
+            command=lambda: self.start_fastsurfer_thread()
+        )
+        run_fastsurfer_btn.grid(row=4, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
+
+        # Restore saved form values
+        self._restore_form_value('seg_freeview_images', self.entry_freeview_images)
+        self._restore_form_value('seg_recon_input', self.entry_recon_input)
+        self._restore_form_value('seg_recon_subject_id', self.entry_recon_subject_id)
+        self._restore_form_value('seg_recon_output', self.entry_recon_output)
+        self._restore_form_value('seg_fastsurfer_input', self.entry_fastsurfer_input)
+        self._restore_form_value('seg_fastsurfer_subject_id', self.entry_fastsurfer_subject_id)
+        self._restore_form_value('seg_fastsurfer_output', self.entry_fastsurfer_output)
+
+
     def setup_settings_page(self):
         """Setup the settings page"""
         # Save current page values before clearing
         last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi"]:
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -926,12 +1101,76 @@ class CLAP(ctk.CTk):
         self.appearance_mode_menu.set(current_mode)
         self.appearance_mode_menu.grid(row=1, column=1, padx=(10, 20), pady=10, sticky="w")
 
+        # FreeSurfer Configuration Section
+        freesurfer_config_frame = ctk.CTkFrame(
+            self.settings_page,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        freesurfer_config_frame.grid(row=3, column=0, pady=20, padx=20, sticky="ew")
+        freesurfer_config_frame.columnconfigure(1, weight=1)
+        
+        freesurfer_config_label = ctk.CTkLabel(
+            freesurfer_config_frame,
+            text="FreeSurfer Configuration",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        freesurfer_config_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 10), sticky="w")
+        
+        # FreeSurfer License Path
+        license_label = ctk.CTkLabel(
+            freesurfer_config_frame,
+            text="License File:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        license_label.grid(row=1, column=0, padx=(20, 10), pady=10, sticky="w")
+        
+        self.freesurfer_license_entry = ctk.CTkEntry(
+            freesurfer_config_frame,
+            height=35,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        current_license = self.settings_manager.get("external_dependencies.freesurfer_license", "")
+        if current_license:
+            self.freesurfer_license_entry.insert(0, current_license)
+        self.freesurfer_license_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        
+        license_browse_btn = ctk.CTkButton(
+            freesurfer_config_frame,
+            text="...",
+            width=40,
+            height=35,
+            fg_color=("#F0F0F0", "#3A3A3A"),
+            text_color=("black", "white"),
+            hover_color=("#D9D9D9", "#505050"),
+            command=self.browse_freesurfer_license
+        )
+        license_browse_btn.grid(row=1, column=2, padx=(0, 20), pady=10)
+        
+        # Save FreeSurfer Settings Button
+        save_fs_settings_btn = ctk.CTkButton(
+            freesurfer_config_frame,
+            text="Save FreeSurfer Settings",
+            height=35,
+            fg_color="#0078D7",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=self.save_freesurfer_settings
+        )
+        save_fs_settings_btn.grid(row=2, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+
 
     def setup_history_page(self):
         """Setup the task history page"""
         # Save current page values before clearing
         last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi"]:
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -1507,6 +1746,141 @@ class CLAP(ctk.CTk):
 
     def show_seeg_roi_mask_complete_message(self):
         messagebox.showinfo("Success", "SEEG ROI Mask Generation Complete")
+
+## Segmentation Toolbox threading ##
+
+    def start_freeview_thread(self):
+        """Start thread to launch freeview"""
+        raw_images = self.entry_freeview_images.get("0.0", "end")
+        images_list = [line.strip() for line in raw_images.split("\n") if line.strip()]
+
+        if not images_list:
+            messagebox.showerror("Input Error", "Please select at least one image to view.")
+            return
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "Launch Freeview",
+            "Segmentation",
+            f"{len(images_list)} image(s)",
+            input_files=images_list,
+            output_location="Display only"
+        )
+        
+        self._show_task_status("Launch Freeview")
+        self.cancel_task_flag = False
+
+        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.launch_freeview, args=(images_list, None, self.on_freeview_complete, lambda: self.cancel_task_flag), daemon=True)
+        self.current_task_thread = task
+        task.start()
+
+    def on_freeview_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
+        self._hide_task_status()
+        self.after(0, self.show_freeview_complete_message)
+
+    def show_freeview_complete_message(self):
+        messagebox.showinfo("Success", "Freeview launched successfully")
+
+    def start_recon_all_thread(self):
+        """Start thread to run FreeSurfer recon-all"""
+        input_image = self.entry_recon_input.get().strip()
+        subject_id = self.entry_recon_subject_id.get().strip()
+        output_dir = self.entry_recon_output.get().strip()
+
+        if not input_image or not subject_id or not output_dir:
+            messagebox.showerror("Input Error", "Please provide all required inputs: T1 image, Subject ID, and Output Directory.")
+            return
+        
+        # Get license file from settings
+        license_file = self.settings_manager.get("external_dependencies.freesurfer_license", "")
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "FreeSurfer recon-all",
+            "Segmentation",
+            f"Subject: {subject_id}",
+            input_files=[input_image],
+            output_location=output_dir
+        )
+        
+        self._show_task_status("FreeSurfer recon-all")
+        self.cancel_task_flag = False
+
+        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_recon_all, args=(input_image, subject_id, output_dir, license_file, self.on_recon_all_complete, lambda: self.cancel_task_flag), daemon=True)
+        self.current_task_thread = task
+        task.start()
+
+    def on_recon_all_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
+        self._hide_task_status()
+        self.after(0, self.show_recon_all_complete_message)
+
+    def show_recon_all_complete_message(self):
+        messagebox.showinfo("Success", "FreeSurfer recon-all completed")
+
+    def start_fastsurfer_thread(self):
+        """Start thread to run FastSurfer"""
+        input_image = self.entry_fastsurfer_input.get().strip()
+        subject_id = self.entry_fastsurfer_subject_id.get().strip()
+        output_dir = self.entry_fastsurfer_output.get().strip()
+
+        if not input_image or not subject_id or not output_dir:
+            messagebox.showerror("Input Error", "Please provide all required inputs: T1 image, Subject ID, and Output Directory.")
+            return
+        
+        # Get paths from settings
+        license_file = self.settings_manager.get("external_dependencies.freesurfer_license", "")
+        fastsurfer_home = self.settings_manager.get("external_dependencies.fastsurfer_home", "")
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "FastSurfer",
+            "Segmentation",
+            f"Subject: {subject_id}",
+            input_files=[input_image],
+            output_location=output_dir
+        )
+        
+        self._show_task_status("FastSurfer")
+        self.cancel_task_flag = False
+
+        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer, args=(input_image, subject_id, output_dir, fastsurfer_home, license_file, self.on_fastsurfer_complete, lambda: self.cancel_task_flag), daemon=True)
+        self.current_task_thread = task
+        task.start()
+
+    def on_fastsurfer_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
+        self._hide_task_status()
+        self.after(0, self.show_fastsurfer_complete_message)
+
+    def show_fastsurfer_complete_message(self):
+        messagebox.showinfo("Success", "FastSurfer completed")
+
+    def browse_freesurfer_license(self):
+        """Browse for FreeSurfer license file"""
+        path = filedialog.askopenfilename(title="Select FreeSurfer License File", filetypes=[("License files", "*.txt"), ("All files", "*.*")])
+        if path:
+            self.freesurfer_license_entry.delete(0, ctk.END)
+            self.freesurfer_license_entry.insert(0, path)
+    
+    def save_freesurfer_settings(self):
+        """Save FreeSurfer configuration settings"""
+        license_path = self.freesurfer_license_entry.get().strip()
+        self.settings_manager.set("external_dependencies.freesurfer_license", license_path)
+        messagebox.showinfo("Success", "FreeSurfer settings saved successfully")
 
 # MAIN LOOP #        
 if __name__ == "__main__":

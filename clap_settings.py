@@ -16,7 +16,10 @@ class SettingsManager:
             "tools_menu_expanded": False,
             "external_dependencies": {
                 "ants_path": "",
-                "mrtrix_path": ""
+                "mrtrix_path": "",
+                "freesurfer_home": "",
+                "freesurfer_license": "",
+                "fastsurfer_home": ""
             }
         }
         self._ensure_user_data_dir()
@@ -96,6 +99,25 @@ class SettingsManager:
             "available": mrtrix_available,
             "commands": mrtrix_commands,
             "custom_path": self.get("external_dependencies.mrtrix_path", "")
+        }
+        
+        # Check FreeSurfer commands
+        freesurfer_commands = ["recon-all", "freeview"]
+        freesurfer_available = all(self.check_dependency(cmd) for cmd in freesurfer_commands)
+        status["FreeSurfer"] = {
+            "available": freesurfer_available,
+            "commands": freesurfer_commands,
+            "custom_path": self.get("external_dependencies.freesurfer_home", ""),
+            "license_path": self.get("external_dependencies.freesurfer_license", "")
+        }
+        
+        # Check FastSurfer (run_fastsurfer.sh)
+        fastsurfer_commands = ["run_fastsurfer.sh"]
+        fastsurfer_available = self.check_dependency("run_fastsurfer.sh")
+        status["FastSurfer"] = {
+            "available": fastsurfer_available,
+            "commands": fastsurfer_commands,
+            "custom_path": self.get("external_dependencies.fastsurfer_home", "")
         }
         
         return status
