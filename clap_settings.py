@@ -58,6 +58,13 @@ class SettingsManager:
         Recursively merge overlay dict into base dict.
         Preserves keys in base that don't exist in overlay.
         Deep copies mutable structures to prevent shared references.
+        
+        Args:
+            base (dict): The base dictionary containing default values.
+            overlay (dict): The overlay dictionary with user values that take precedence.
+        
+        Returns:
+            dict: A new merged dictionary with no shared references to input dicts.
         """
         def _copy_if_mutable(value):
             """Helper to deep copy mutable structures, shallow copy immutables"""
