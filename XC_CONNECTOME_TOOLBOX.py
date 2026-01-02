@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-def gen_connectome(mask_image, tracks_list, output_dir, on_complete=None):
+def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None, on_complete=None):
 
     # CREATE OUTPUT FOLDER
     mask_filename = os.path.basename(mask_image)
@@ -23,13 +23,29 @@ def gen_connectome(mask_image, tracks_list, output_dir, on_complete=None):
         tck_name = os.path.splitext(os.path.basename(tck_path))[0]
         output_csv_path = os.path.join(final_output_folder, f"{tck_name}_connectome.csv")
 
+        found_weights = None
+
+        if tracks_weights_list:
+            for weight_path in tracks_weights_list:
+                weight_path = weight_path.strip()
+                if not weight_path:
+                    continue
+                w_stem = os.path.splitext(os.path.basename(weight_path))[0]
+                if w_stem == tck_name:
+                    found_weights = weight_path
+                    break
+
         cmd = [
             "tck2connectome",
             tck_path,           
             mask_image,
-            output_csv_path,
-            "-force"
+            output_csv_path
         ]
+
+        if found_weights:
+            cmd.extend(["-tck_weights_in", found_weights])
+
+        cmd.append("-force")
 
 
         try:
@@ -123,7 +139,6 @@ def display_connectome(paired_data, on_complete=None):
         ax = axes[row, col]
         
         try:
-            # CHARGEMENT : On transforme le CSV en matrice numérique
             matrix = np.loadtxt(csv_path, delimiter=',')
             matrix_log = np.log1p(matrix)
 

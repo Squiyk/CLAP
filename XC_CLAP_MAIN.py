@@ -291,8 +291,12 @@ class CLAP(ctk.CTk):
         self.entry_tracks_cnctm, tracks_cnctm_btn = self.createrow(gen_con_frame,2,"Tracts:", use_textbox=True)
         tracks_cnctm_btn.configure(command=lambda: self.get_files_from_folder(self.entry_tracks_cnctm, ".tck"))
 
+        # Tract weights file selection
+        self.entry_tracks_cnctm_weights, tracks_cnctm_weights_btn = self.createrow(gen_con_frame,3,"Tract Weights Files (optional):", use_textbox=True)
+        tracks_cnctm_weights_btn.configure(command=lambda: self.get_files_from_folder(self.entry_tracks_cnctm_weights, ".csv"))
+
         # Select output directory
-        self.entry_output_cnctm, output_cnctm_btn = self.createrow(gen_con_frame,3,"Output Directory:")
+        self.entry_output_cnctm, output_cnctm_btn = self.createrow(gen_con_frame,4,"Output Directory:")
         output_cnctm_btn.configure(command=lambda: self.browse_folder(self.entry_output_cnctm))
 
         # Run connectome generation button
@@ -304,7 +308,7 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_connectome_thread()
         )
-        run_cnctm_btn.grid(row=4, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
+        run_cnctm_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
 
         # Compute z-scored connectome #
@@ -681,13 +685,16 @@ class CLAP(ctk.CTk):
         raw_tracks = self.entry_tracks_cnctm.get("0.0", "end")
         tracks_list = [line.strip() for line in raw_tracks.split("\n") if line.strip()]
 
+        raw_weights = self.entry_tracks_cnctm_weights.get("0.0", "end")
+        tracks_weights_list = [line.strip() for line in raw_weights.split("\n") if line.strip()]
+
         output_dir = self.entry_output_cnctm.get().strip()
 
         if not mask_image or not tracks_list:
-            messagebox.showerror("Input Error", "Please provide Mask Image and at least one Track file.")
+            messagebox.showerror("Input Error", "Please provide Mask Image, at least one Track file and an output directory.")
             return
 
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, self.on_connectome_complete))
+        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete))
         task.start()
 
     def on_connectome_complete(self):
