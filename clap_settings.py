@@ -68,16 +68,17 @@ class SettingsManager:
                     # Both are dicts - recursively merge
                     result[key] = self._deep_merge(base[key], overlay[key])
                 else:
-                    # Use overlay value
-                    result[key] = overlay[key]
+                    # Use overlay value (by reference for immutable, copy for mutable)
+                    result[key] = copy.deepcopy(overlay[key]) if isinstance(overlay[key], (dict, list)) else overlay[key]
             else:
-                # Key only in base - preserve it
-                result[key] = copy.deepcopy(base[key]) if isinstance(base[key], (dict, list)) else base[key]
+                # Key only in base - preserve it (by reference since base is already a copy)
+                result[key] = base[key]
         
         # Add any keys that are only in overlay
         for key in overlay:
             if key not in base:
-                result[key] = overlay[key]
+                # Copy mutable structures to avoid shared references
+                result[key] = copy.deepcopy(overlay[key]) if isinstance(overlay[key], (dict, list)) else overlay[key]
         
         return result
     
