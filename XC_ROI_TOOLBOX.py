@@ -11,11 +11,13 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
     output_dir_path = Path(output_dir)
     Radius_mm = sel_rad
 
-
+    success = False
     try:
         # Check for cancellation at the start
         if cancel_checker and cancel_checker():
             print("SEEG ROI mask generation cancelled by user")
+            if on_complete:
+                on_complete(success=False)
             return
         
         img = nib.load(ref_path)
@@ -79,6 +81,8 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
             # Check for cancellation while processing contacts
             if cancel_checker and cancel_checker():
                 print("SEEG ROI mask generation cancelled by user")
+                if on_complete:
+                    on_complete(success=False)
                 return
             
             contact_id = i + 1
@@ -130,12 +134,14 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
             for entry in lut_entries:
                 parts = entry.split()
                 f_lut.write(f"{parts[0]:>4} {parts[1]:<25} {parts[2]:>3} {parts[3]:>3} {parts[4]:>3} {parts[5]:>3}\n")
+        
+        success = True
 
     except Exception as e:
         print(f"Critical error : {e}")
 
     if on_complete:
-        on_complete()
+        on_complete(success=success)
 
 
 def clean_subject_name(filename):

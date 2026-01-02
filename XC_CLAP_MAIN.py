@@ -1767,17 +1767,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_registration_complete(self):
+    def on_registration_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0,self.show_new_registration_complete_message)
+        if success:
+            self.after(0, self.show_new_registration_complete_message)
+        else:
+            self.after(0, self.show_new_registration_failed_message)
 
     def show_new_registration_complete_message(self):
         messagebox.showinfo("Success", "Registration Complete")
+    
+    def show_new_registration_failed_message(self):
+        messagebox.showerror("Error", "Registration failed. Check the console for details.")
 
 # Apply transform thread starter
 
@@ -1811,17 +1818,24 @@ class CLAP(ctk.CTk):
             self.current_task_thread = task
             task.start()
 
-    def on_apply_transform_complete(self):
+    def on_apply_transform_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0,self.show_apply_transform_complete_message)
+        if success:
+            self.after(0, self.show_apply_transform_complete_message)
+        else:
+            self.after(0, self.show_apply_transform_failed_message)
         
     def show_apply_transform_complete_message(self):
         messagebox.showinfo("Success", "Transform Application Complete")
+    
+    def show_apply_transform_failed_message(self):
+        messagebox.showerror("Error", "Transform application failed. Check the console for details.")
 
 ## Connectome threading ##
 
@@ -1858,17 +1872,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_connectome_complete(self):
+    def on_connectome_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0,self.show_connectome_complete_message)
+        if success:
+            self.after(0, self.show_connectome_complete_message)
+        else:
+            self.after(0, self.show_connectome_failed_message)
 
     def show_connectome_complete_message(self):
         messagebox.showinfo("Success", "Connectome Generation Complete")
+    
+    def show_connectome_failed_message(self):
+        messagebox.showerror("Error", "Connectome generation failed. Check the console for details.")
 
 # Generate z-scored connectome thread starter
     def start_z_scored_connectome_thread(self):
@@ -1897,17 +1918,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_z_score_complete(self):
+    def on_z_score_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0,self.show_z_score_complete_message)
+        if success:
+            self.after(0, self.show_z_score_complete_message)
+        else:
+            self.after(0, self.show_z_score_failed_message)
 
     def show_z_score_complete_message(self):
         messagebox.showinfo("Success", "Z-Score Computation Complete")
+    
+    def show_z_score_failed_message(self):
+        messagebox.showerror("Error", "Z-Score computation failed. Check the console for details.")
 
 # Display connectome thread starter
     def start_display_connectome_thread(self):
@@ -1953,17 +1981,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
     
-    def on_display_complete(self):
+    def on_display_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0,self.show_display_complete_message)
+        if success:
+            self.after(0, self.show_display_complete_message)
+        else:
+            self.after(0, self.show_display_failed_message)
 
     def show_display_complete_message(self):
         messagebox.showinfo("Success", "Connectome Display Complete")
+    
+    def show_display_failed_message(self):
+        messagebox.showerror("Error", "Connectome display failed. Check the console for details.")
 
 ## ROI Toolbox threading ##
     def start_seeg_roi_mask_thread(self):
@@ -2001,17 +2036,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_seeg_roi_mask_complete(self):
+    def on_seeg_roi_mask_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0,self.show_seeg_roi_mask_complete_message)
+        if success:
+            self.after(0, self.show_seeg_roi_mask_complete_message)
+        else:
+            self.after(0, self.show_seeg_roi_mask_failed_message)
 
     def show_seeg_roi_mask_complete_message(self):
         messagebox.showinfo("Success", "SEEG ROI Mask Generation Complete")
+    
+    def show_seeg_roi_mask_failed_message(self):
+        messagebox.showerror("Error", "SEEG ROI mask generation failed. Check the console for details.")
 
 ## Segmentation Toolbox threading ##
 
@@ -2043,17 +2085,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_freeview_complete(self):
+    def on_freeview_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0, self.show_freeview_complete_message)
+        if success:
+            self.after(0, self.show_freeview_complete_message)
+        else:
+            self.after(0, self.show_freeview_failed_message)
 
     def show_freeview_complete_message(self):
         messagebox.showinfo("Success", "Freeview launched successfully")
+    
+    def show_freeview_failed_message(self):
+        messagebox.showerror("Error", "Freeview failed to launch. Check the console for details.")
 
     def start_recon_all_thread(self):
         """Start thread to run FreeSurfer recon-all"""
@@ -2084,17 +2133,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_recon_all_complete(self):
+    def on_recon_all_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0, self.show_recon_all_complete_message)
+        if success:
+            self.after(0, self.show_recon_all_complete_message)
+        else:
+            self.after(0, self.show_recon_all_failed_message)
 
     def show_recon_all_complete_message(self):
         messagebox.showinfo("Success", "FreeSurfer recon-all completed")
+    
+    def show_recon_all_failed_message(self):
+        messagebox.showerror("Error", "FreeSurfer recon-all failed. Check the console for details.")
 
     def start_fastsurfer_thread(self):
         """Start thread to run FastSurfer"""
@@ -2145,17 +2201,24 @@ class CLAP(ctk.CTk):
         self.current_task_thread = task
         task.start()
 
-    def on_fastsurfer_complete(self):
+    def on_fastsurfer_complete(self, success=True):
         # Log task completion
         if self.current_task_id is not None:
-            self.task_logger.complete_task(self.current_task_id, "completed")
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
             self.current_task_id = None
         self.current_task_thread = None
         self._hide_task_status()
-        self.after(0, self.show_fastsurfer_complete_message)
+        if success:
+            self.after(0, self.show_fastsurfer_complete_message)
+        else:
+            self.after(0, self.show_fastsurfer_failed_message)
 
     def show_fastsurfer_complete_message(self):
         messagebox.showinfo("Success", "FastSurfer completed")
+    
+    def show_fastsurfer_failed_message(self):
+        messagebox.showerror("Error", "FastSurfer failed. Check the console for details.")
 
     def browse_freesurfer_license(self):
         """Browse for FreeSurfer license file"""

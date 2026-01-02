@@ -46,6 +46,8 @@ def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_che
     # Check for cancellation
     if cancel_checker and cancel_checker():
         print("Freeview launch cancelled by user")
+        if on_complete:
+            on_complete(success=False)
         return
     
     # Build freeview command
@@ -65,6 +67,7 @@ def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_che
     else:
         print(f"Launching freeview with {(len(cmd)-1)//2} image(s)...")
     
+    success = False
     try:
         # Launch freeview as a detached process
         subprocess.Popen(
@@ -74,13 +77,14 @@ def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_che
             start_new_session=True
         )
         print("Freeview launched successfully")
+        success = True
     except FileNotFoundError:
         print("ERROR: freeview command not found. Please ensure FreeSurfer is installed and in your PATH.")
     except Exception as e:
         print(f"ERROR launching freeview: {e}")
     
     if on_complete:
-        on_complete()
+        on_complete(success=success)
 
 
 def run_recon_all(input_image, subject_id, output_dir, license_file=None, num_threads=None, on_complete=None, cancel_checker=None):
@@ -99,12 +103,14 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, num_th
     # Check for cancellation at start
     if cancel_checker and cancel_checker():
         print("Recon-all cancelled by user")
+        if on_complete:
+            on_complete(success=False)
         return
     
     if not input_image or not subject_id or not output_dir:
         print("ERROR: Missing required parameters for recon-all")
         if on_complete:
-            on_complete()
+            on_complete(success=False)
         return
     
     # Prepare environment
@@ -168,6 +174,8 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, num_th
                 except subprocess.TimeoutExpired:
                     process.kill()
                 print("Recon-all process terminated")
+                if on_complete:
+                    on_complete(success=False)
                 return
             
             # Check if process has finished
@@ -188,11 +196,17 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, num_th
             
     except FileNotFoundError:
         print("ERROR: recon-all command not found. Please ensure FreeSurfer is installed and in your PATH.")
+        if on_complete:
+            on_complete(success=False)
+        return
     except Exception as e:
         print(f"ERROR running recon-all: {e}")
+        if on_complete:
+            on_complete(success=False)
+        return
     
     if on_complete:
-        on_complete()
+        on_complete(success=(retcode == 0))
 
 
 def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, license_file=None, use_gpu=True, num_threads=None, freesurfer_home=None, on_complete=None, cancel_checker=None):
@@ -214,19 +228,21 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
     # Check for cancellation at start
     if cancel_checker and cancel_checker():
         print("FastSurfer cancelled by user")
+        if on_complete:
+            on_complete(success=False)
         return
     
     if not input_image or not subject_id or not output_dir:
         print("ERROR: Missing required parameters for FastSurfer")
         if on_complete:
-            on_complete()
+            on_complete(success=False)
         return
     
     # Validate input image exists
     if not os.path.exists(input_image):
         print(f"ERROR: Input image not found: {input_image}")
         if on_complete:
-            on_complete()
+            on_complete(success=False)
         return
     
     # Prepare environment
@@ -286,7 +302,7 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
         if not os.path.exists(run_fastsurfer_script):
             print(f"ERROR: run_fastsurfer.sh not found in {fastsurfer_home}")
             if on_complete:
-                on_complete()
+                on_complete(success=False)
             return
         cmd = [run_fastsurfer_script]
     else:
@@ -386,6 +402,8 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
                 except subprocess.TimeoutExpired:
                     process.kill()
                 print("FastSurfer process terminated")
+                if on_complete:
+                    on_complete(success=False)
                 return
             
             # Check if process has finished
@@ -406,8 +424,14 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
             
     except FileNotFoundError:
         print("ERROR: FastSurfer command not found. Please ensure FastSurfer is installed and configured.")
+        if on_complete:
+            on_complete(success=False)
+        return
     except Exception as e:
         print(f"ERROR running FastSurfer: {e}")
+        if on_complete:
+            on_complete(success=False)
+        return
     
     if on_complete:
-        on_complete()
+        on_complete(success=(retcode == 0))

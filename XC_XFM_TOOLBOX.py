@@ -6,18 +6,25 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
     # Assess batch size
     if isinstance(n_moving_image, list):
         total_files = len(n_moving_image)
+        has_failures = False
         
         for single_file in n_moving_image:
             # Check for cancellation before processing each file
             if cancel_checker and cancel_checker():
                 print("Registration cancelled by user")
+                if on_complete:
+                    on_complete(success=False)
                 return
             
-            new_xfm(n_output_folder, n_fixed_image, single_file, on_complete=None, cancel_checker=cancel_checker)
+            # Track failures in batch processing
+            # Call recursively without callback, check success manually
+            result = new_xfm(n_output_folder, n_fixed_image, single_file, on_complete=None, cancel_checker=cancel_checker)
+            if result is False:
+                has_failures = True
         
         if on_complete:
-            on_complete()
-        return
+            on_complete(success=(not has_failures))
+        return not has_failures
     
     # Generate output prefix
     def clean_name(path):
@@ -45,7 +52,9 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
     # Check for cancellation before starting
     if cancel_checker and cancel_checker():
         print("Registration cancelled by user")
-        return
+        if on_complete:
+            on_complete(success=False)
+        return False
     
     # Run
     cmd = [
@@ -57,6 +66,7 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
         "-n", str(safe_threads)
     ]
 
+    success = False
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -71,11 +81,14 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
                     process.kill()
                     process.wait()
                 print(f"Registration cancelled: {mov_name}")
-                return
+                if on_complete:
+                    on_complete(success=False)
+                return False
         
         # Check if process completed successfully
         if process.returncode == 0:
             print(f"Success: {mov_name}")
+            success = True
         else:
             stderr = process.stderr.read().decode() if process.stderr else ""
             print(f"Error on {mov_name}: {stderr}")
@@ -86,7 +99,9 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
     
     # Send confirmation
     if on_complete:
-        on_complete()
+        on_complete(success=success)
+    
+    return success
   
 
 def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, on_complete=None, cancel_checker=None):
@@ -97,16 +112,21 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
         xfm_list = [f. strip() for f in xfm_files if f.strip()]
 
     if isinstance(moving_image, list):
+        has_failures = False
         for single_image in moving_image:
             # Check for cancellation before processing each image
             if cancel_checker and cancel_checker():
                 print("Transform application cancelled by user")
+                if on_complete:
+                    on_complete(success=False)
                 return
             
-            apply_existing_xfm(output_folder, xfm_list, single_image, reference_image, on_complete=None, cancel_checker=cancel_checker)
+            result = apply_existing_xfm(output_folder, xfm_list, single_image, reference_image, on_complete=None, cancel_checker=cancel_checker)
+            if result is False:
+                has_failures = True
         if on_complete: 
-            on_complete()
-        return
+            on_complete(success=(not has_failures))
+        return not has_failures
 
     def clean_name(path):
         base = os.path.basename(path)
@@ -141,8 +161,11 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
     # Check for cancellation before starting
     if cancel_checker and cancel_checker():
         print("Transform application cancelled by user")
-        return
+        if on_complete:
+            on_complete(success=False)
+        return False
 
+    success = False
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -157,10 +180,14 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
                     process.kill()
                     process.wait()
                 print(f"Transform application cancelled: {mov_name}")
-                return
+                if on_complete:
+                    on_complete(success=False)
+                return False
         
         # Check if process completed successfully
-        if process.returncode != 0:
+        if process.returncode == 0:
+            success = True
+        else:
             stderr = process.stderr.read().decode() if process.stderr else ""
             print(f"ANTs Apply Transforms failed with error: {stderr}")
     except subprocess.CalledProcessError as e: 
@@ -169,4 +196,6 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
         print("ANTs not found. Please ensure ANTs is in your system PATH.")
 
     if on_complete:
-        on_complete()
+        on_complete(success=success)
+    
+    return success
