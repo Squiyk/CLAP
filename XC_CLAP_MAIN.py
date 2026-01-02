@@ -1000,7 +1000,7 @@ class CLAP(ctk.CTk):
         
         self.fastsurfer_gpu_toggle = ctk.CTkCheckBox(
             gpu_toggle_frame,
-            text="Use GPU acceleration (if available)",
+            text="Use GPU acceleration",
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             text_color=("gray30", "gray80")
         )
