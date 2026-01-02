@@ -1,15 +1,19 @@
 import os
 import subprocess
 
-def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None):
+def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, cancel_checker=None):
     
     # Assess batch size
     if isinstance(n_moving_image, list):
         total_files = len(n_moving_image)
         
         for single_file in n_moving_image:
+            # Check for cancellation before processing each file
+            if cancel_checker and cancel_checker():
+                print("Registration cancelled by user")
+                return
             
-            new_xfm(n_output_folder, n_fixed_image, single_file, on_complete=None)
+            new_xfm(n_output_folder, n_fixed_image, single_file, on_complete=None, cancel_checker=cancel_checker)
         
         if on_complete:
             on_complete()
@@ -38,6 +42,11 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None):
         total_cores = 4
     safe_threads = max(1, total_cores - 2)
 
+    # Check for cancellation before starting
+    if cancel_checker and cancel_checker():
+        print("Registration cancelled by user")
+        return
+    
     # Run
     cmd = [
         "antsRegistrationSyN.sh",
@@ -49,8 +58,27 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None):
     ]
 
     try:
-        subprocess.run(cmd, check=True)
-        print(f"Success: {mov_name}")
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Poll the process and check for cancellation
+        while process.poll() is None:
+            if cancel_checker and cancel_checker():
+                print(f"Cancelling registration for {mov_name}")
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                print(f"Registration cancelled: {mov_name}")
+                return
+        
+        # Check if process completed successfully
+        if process.returncode == 0:
+            print(f"Success: {mov_name}")
+        else:
+            stderr = process.stderr.read().decode() if process.stderr else ""
+            print(f"Error on {mov_name}: {stderr}")
     except subprocess.CalledProcessError as e:
         print(f"Error on {mov_name}: {e}")
     except FileNotFoundError:
@@ -61,7 +89,7 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None):
         on_complete()
   
 
-def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, on_complete=None):
+def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, on_complete=None, cancel_checker=None):
 
     if isinstance(xfm_files, str):
         xfm_list = [xfm_files]
@@ -70,7 +98,12 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
 
     if isinstance(moving_image, list):
         for single_image in moving_image:
-            apply_existing_xfm(output_folder, xfm_list, single_image, reference_image, on_complete=None)
+            # Check for cancellation before processing each image
+            if cancel_checker and cancel_checker():
+                print("Transform application cancelled by user")
+                return
+            
+            apply_existing_xfm(output_folder, xfm_list, single_image, reference_image, on_complete=None, cancel_checker=cancel_checker)
         if on_complete: 
             on_complete()
         return
@@ -104,13 +137,36 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
     
     for xfm in reversed(xfm_list):
         cmd.extend(["-t", xfm])
+    
+    # Check for cancellation before starting
+    if cancel_checker and cancel_checker():
+        print("Transform application cancelled by user")
+        return
 
     try:
-        subprocess. run(cmd, check=True)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Poll the process and check for cancellation
+        while process.poll() is None:
+            if cancel_checker and cancel_checker():
+                print(f"Cancelling transform application for {mov_name}")
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                print(f"Transform application cancelled: {mov_name}")
+                return
+        
+        # Check if process completed successfully
+        if process.returncode != 0:
+            stderr = process.stderr.read().decode() if process.stderr else ""
+            print(f"ANTs Apply Transforms failed with error: {stderr}")
     except subprocess.CalledProcessError as e: 
         print(f"ANTs Apply Transforms failed with error: {e}")
     except FileNotFoundError: 
-        print("ANTs not found. Please ensure ANTs is installed and in your system PATH.")
+        print("ANTs not found. Please ensure ANTs is in your system PATH.")
 
     if on_complete:
         on_complete()

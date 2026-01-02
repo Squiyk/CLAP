@@ -180,11 +180,9 @@ class CLAP(ctk.CTk):
     def cancel_current_task(self):
         """Cancel the currently running task
         
-        Note: This marks the task as cancelled in the UI and log, but the actual
-        background thread will continue to completion since the task execution
-        functions don't currently check for cancellation flags. To fully support
-        cancellation, the underlying task functions would need to be modified to
-        periodically check a cancellation flag.
+        This marks the task as cancelled and signals the background thread to terminate
+        any running subprocess. The cancellation is checked periodically in the task
+        execution functions.
         """
         if self.current_task_id is not None:
             self.cancel_task_flag = True
@@ -1093,7 +1091,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("New Registration")
         self.cancel_task_flag = False
         
-        task = threading.Thread(target=XC_XFM_TOOLBOX.new_xfm, args=(out, fixed, moving_list, self.on_registration_complete), daemon=True)
+        task = threading.Thread(target=XC_XFM_TOOLBOX.new_xfm, args=(out, fixed, moving_list, self.on_registration_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
@@ -1137,7 +1135,7 @@ class CLAP(ctk.CTk):
             self._show_task_status("Apply Transform")
             self.cancel_task_flag = False
 
-            task = threading.Thread(target=XC_XFM_TOOLBOX.apply_existing_xfm, args=(out_dir, transform_list, moving_list, reference, self.on_apply_transform_complete), daemon=True)
+            task = threading.Thread(target=XC_XFM_TOOLBOX.apply_existing_xfm, args=(out_dir, transform_list, moving_list, reference, self.on_apply_transform_complete, lambda: self.cancel_task_flag), daemon=True)
             self.current_task_thread = task
             task.start()
 
@@ -1184,7 +1182,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("Generate Connectomes")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete), daemon=True)
+        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
@@ -1223,7 +1221,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("Z-Score Connectome")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete), daemon=True)
+        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
@@ -1327,7 +1325,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("Generate SEEG ROI Masks")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete), daemon=True)
+        task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 

@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None, on_complete=None):
+def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None, on_complete=None, cancel_checker=None):
 
     # CREATE OUTPUT FOLDER
     mask_filename = os.path.basename(mask_image)
@@ -16,6 +16,11 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
 
     # Run
     for tck_path in tracks_list:
+        # Check for cancellation before processing each track
+        if cancel_checker and cancel_checker():
+            print("Connectome generation cancelled by user")
+            return
+        
         tck_path = tck_path.strip()
         if not tck_path or not os.path.exists(tck_path):
             continue
@@ -49,13 +54,32 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
 
 
         try:
+            # Check for cancellation before starting
+            if cancel_checker and cancel_checker():
+                print("Connectome generation cancelled by user")
+                return
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             
-            if result.returncode == 0:
+            # Poll the process and check for cancellation
+            while process.poll() is None:
+                if cancel_checker and cancel_checker():
+                    print(f"Cancelling connectome generation for {tck_name}")
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                    print(f"Connectome generation cancelled: {tck_name}")
+                    return
+            
+            # Check if process completed successfully
+            if process.returncode == 0:
                 print(f"Created: {os.path.basename(output_csv_path)}")
             else:
-                print(f"Command Failed for {tck_name}:\n{result.stderr}")
+                stderr = process.stderr.read() if process.stderr else ""
+                print(f"Command Failed for {tck_name}:\n{stderr}")
                 
         except Exception as e:
             print(f"Critical Error on {tck_name}: {e}")
@@ -66,10 +90,14 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
     if on_complete:
         on_complete()
 
-
-def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None):
+def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None, cancel_checker=None):
 
     try:
+        # Check for cancellation at the start
+        if cancel_checker and cancel_checker():
+            print("Z-score computation cancelled by user")
+            return
+        
         # Load the subject matrix
 
         subject_matrix = np.loadtxt(sub_cnctm, delimiter=',')
@@ -77,6 +105,11 @@ def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None)
         # Load reference matrices
         ref_matrices = []
         for path in ref_cnctm_list:
+            # Check for cancellation while loading references
+            if cancel_checker and cancel_checker():
+                print("Z-score computation cancelled by user")
+                return
+            
             path = path.strip()
             if os.path.exists(path):
                 ref_mat = np.loadtxt(path, delimiter=',')

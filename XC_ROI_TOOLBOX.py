@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.cm as cm
 import re
 
-def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, on_complete=None):
+def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, on_complete=None, cancel_checker=None):
 
     ref_path = Path(ref_mask_img)
     coords_path = Path(seeg_coords_file)
@@ -13,6 +13,11 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
 
 
     try:
+        # Check for cancellation at the start
+        if cancel_checker and cancel_checker():
+            print("SEEG ROI mask generation cancelled by user")
+            return
+        
         img = nib.load(ref_path)
         affine = img.affine
         inv_affine = np.linalg.inv(affine)
@@ -71,6 +76,11 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
         lut_entries.append(f"0 Background 0 0 0 0")
 
         for i, contact in enumerate(final_contacts):
+            # Check for cancellation while processing contacts
+            if cancel_checker and cancel_checker():
+                print("SEEG ROI mask generation cancelled by user")
+                return
+            
             contact_id = i + 1
             world_coords = np.array(contact['coords'])
 
