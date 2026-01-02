@@ -1088,9 +1088,12 @@ class CLAP(ctk.CTk):
         # Check dependency status
         dep_status = self.settings_manager.get_dependency_status()
         
+        # Store entry widgets for saving later
+        self.dep_path_entries = {}
+        
         row_idx = 1
         for dep_name, dep_info in dep_status.items():
-            # Dependency name
+            # Dependency name and status on same row
             name_label = ctk.CTkLabel(
                 deps_frame,
                 text=f"{dep_name}:",
@@ -1115,8 +1118,9 @@ class CLAP(ctk.CTk):
             )
             status_label.grid(row=row_idx, column=1, padx=10, pady=10, sticky="w")
             
-            # Commands list
             row_idx += 1
+            
+            # Commands list
             commands_text = "Commands: " + ", ".join(dep_info["commands"])
             commands_label = ctk.CTkLabel(
                 deps_frame,
@@ -1124,7 +1128,48 @@ class CLAP(ctk.CTk):
                 font=ctk.CTkFont(family="Proxima Nova", size=12),
                 text_color=("gray40", "gray70")
             )
-            commands_label.grid(row=row_idx, column=0, columnspan=3, padx=(40, 20), pady=(0, 10), sticky="w")
+            commands_label.grid(row=row_idx, column=0, columnspan=3, padx=(40, 20), pady=(0, 5), sticky="w")
+            
+            row_idx += 1
+            
+            # Manual path configuration
+            path_label = ctk.CTkLabel(
+                deps_frame,
+                text="Custom Path:",
+                font=ctk.CTkFont(family="Proxima Nova", size=12),
+                text_color=("gray40", "gray70")
+            )
+            path_label.grid(row=row_idx, column=0, padx=(40, 10), pady=5, sticky="w")
+            
+            # Entry for custom path
+            path_entry = ctk.CTkEntry(
+                deps_frame,
+                height=30,
+                border_color=("#D0D0D0", "#505050"),
+                fg_color=("white", "#343638"),
+                text_color=("black", "white"),
+                border_width=2
+            )
+            current_path = dep_info.get("custom_path", "")
+            if current_path:
+                path_entry.insert(0, current_path)
+            path_entry.grid(row=row_idx, column=1, padx=10, pady=5, sticky="ew")
+            
+            # Browse button
+            browse_btn = ctk.CTkButton(
+                deps_frame,
+                text="...",
+                width=40,
+                height=30,
+                fg_color=("#F0F0F0", "#3A3A3A"),
+                text_color=("black", "white"),
+                hover_color=("#D9D9D9", "#505050"),
+                command=lambda name=dep_name, entry=path_entry: self.browse_dependency_path(name, entry)
+            )
+            browse_btn.grid(row=row_idx, column=2, padx=(0, 20), pady=5)
+            
+            # Store entry for later
+            self.dep_path_entries[dep_name] = path_entry
             
             row_idx += 1
         
@@ -1138,16 +1183,32 @@ class CLAP(ctk.CTk):
         check_time_label.grid(row=row_idx, column=0, columnspan=3, padx=20, pady=(5, 5), sticky="w")
         row_idx += 1
         
+        # Buttons row
+        button_frame = ctk.CTkFrame(deps_frame, fg_color="transparent")
+        button_frame.grid(row=row_idx, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+        button_frame.columnconfigure((0, 1), weight=1)
+        
+        # Save dependencies button
+        save_deps_btn = ctk.CTkButton(
+            button_frame,
+            text="Save Dependency Paths",
+            height=35,
+            fg_color="#0078D7",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=self.save_dependency_paths
+        )
+        save_deps_btn.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        
         # Refresh button
         refresh_btn = ctk.CTkButton(
-            deps_frame,
+            button_frame,
             text="Refresh Status",
             height=35,
             fg_color="#0078D7",
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             command=self.setup_settings_page
         )
-        refresh_btn.grid(row=row_idx, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+        refresh_btn.grid(row=0, column=1, padx=(5, 0), sticky="ew")
         
         # Appearance Settings Section
         appearance_frame = ctk.CTkFrame(
@@ -2046,6 +2107,123 @@ class CLAP(ctk.CTk):
         self.settings_manager.set("external_dependencies.freesurfer_for_fastsurfer", selected_path)
         
         messagebox.showinfo("Success", "FreeSurfer settings saved successfully")
+    
+    def browse_dependency_path(self, dep_name, entry_widget):
+        """Browse for dependency installation directory"""
+        path = filedialog.askdirectory(title=f"Select {dep_name} Installation Directory")
+        if path:
+            entry_widget.delete(0, ctk.END)
+            entry_widget.insert(0, path)
+    
+    def save_dependency_paths(self):
+        """Save custom dependency paths and set up environment"""
+        # Mapping of dependency names to setting keys
+        dep_mapping = {
+            "ANTs": "ants_path",
+            "MRtrix3": "mrtrix_path",
+            "FreeSurfer": "freesurfer_home",
+            "FastSurfer": "fastsurfer_home"
+        }
+        
+        saved_count = 0
+        errors = []
+        
+        for dep_name, entry_widget in self.dep_path_entries.items():
+            path = entry_widget.get().strip()
+            setting_key = dep_mapping.get(dep_name)
+            
+            if not setting_key:
+                continue
+            
+            # Save the path
+            self.settings_manager.set(f"external_dependencies.{setting_key}", path)
+            
+            if path:
+                # Validate the path exists
+                if not os.path.exists(path):
+                    errors.append(f"{dep_name}: Path does not exist")
+                    continue
+                
+                # Try to set up the dependency environment
+                success = self._setup_dependency_environment(dep_name, path)
+                if success:
+                    saved_count += 1
+                else:
+                    errors.append(f"{dep_name}: Could not verify installation")
+        
+        # Show result message
+        if errors:
+            error_msg = "Some dependencies could not be configured:\n" + "\n".join(errors)
+            if saved_count > 0:
+                error_msg = f"Saved {saved_count} dependency path(s).\n\n" + error_msg
+            messagebox.showwarning("Partial Success", error_msg)
+        else:
+            messagebox.showinfo("Success", f"All dependency paths saved successfully!\n\nPlease refresh to see updated status.")
+    
+    def _setup_dependency_environment(self, dep_name, path):
+        """
+        Attempt to set up environment for a dependency.
+        Returns True if successful, False otherwise.
+        """
+        try:
+            if dep_name == "ANTs":
+                # Check for ANTs bin directory
+                bin_path = os.path.join(path, "bin")
+                if os.path.exists(bin_path):
+                    # Add to PATH in current environment
+                    current_path = os.environ.get("PATH", "")
+                    if bin_path not in current_path:
+                        os.environ["PATH"] = bin_path + os.pathsep + current_path
+                    return True
+                # If no bin directory, assume path is the bin directory itself
+                elif any(os.path.exists(os.path.join(path, cmd)) for cmd in ["antsRegistrationSyN.sh", "antsApplyTransforms"]):
+                    current_path = os.environ.get("PATH", "")
+                    if path not in current_path:
+                        os.environ["PATH"] = path + os.pathsep + current_path
+                    return True
+                return False
+            
+            elif dep_name == "MRtrix3":
+                # Check for MRtrix3 bin directory
+                bin_path = os.path.join(path, "bin")
+                if os.path.exists(bin_path):
+                    current_path = os.environ.get("PATH", "")
+                    if bin_path not in current_path:
+                        os.environ["PATH"] = bin_path + os.pathsep + current_path
+                    return True
+                elif os.path.exists(os.path.join(path, "tck2connectome")):
+                    current_path = os.environ.get("PATH", "")
+                    if path not in current_path:
+                        os.environ["PATH"] = path + os.pathsep + current_path
+                    return True
+                return False
+            
+            elif dep_name == "FreeSurfer":
+                # Check for FreeSurfer installation
+                setup_script = os.path.join(path, "SetUpFreeSurfer.sh")
+                bin_path = os.path.join(path, "bin")
+                if os.path.exists(setup_script) or os.path.exists(bin_path):
+                    os.environ["FREESURFER_HOME"] = path
+                    if os.path.exists(bin_path):
+                        current_path = os.environ.get("PATH", "")
+                        if bin_path not in current_path:
+                            os.environ["PATH"] = bin_path + os.pathsep + current_path
+                    return True
+                return False
+            
+            elif dep_name == "FastSurfer":
+                # Check for FastSurfer installation
+                run_script = os.path.join(path, "run_fastsurfer.sh")
+                if os.path.exists(run_script):
+                    os.environ["FASTSURFER_HOME"] = path
+                    return True
+                return False
+            
+            return False
+        except Exception as e:
+            print(f"Error setting up {dep_name}: {e}")
+            return False
+
 
 # MAIN LOOP #        
 if __name__ == "__main__":

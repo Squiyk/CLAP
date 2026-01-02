@@ -86,42 +86,87 @@ class SettingsManager:
         
         # Check ANTs commands
         ants_commands = ["antsRegistrationSyN.sh", "antsApplyTransforms"]
+        ants_custom_path = self.get("external_dependencies.ants_path", "")
         ants_available = all(self.check_dependency(cmd) for cmd in ants_commands)
+        
+        # If not in PATH, check custom path
+        if not ants_available and ants_custom_path:
+            ants_available = self._check_commands_in_path(ants_commands, ants_custom_path)
+        
         status["ANTs"] = {
             "available": ants_available,
             "commands": ants_commands,
-            "custom_path": self.get("external_dependencies.ants_path", "")
+            "custom_path": ants_custom_path
         }
         
         # Check MRtrix3 commands
         mrtrix_commands = ["tck2connectome"]
+        mrtrix_custom_path = self.get("external_dependencies.mrtrix_path", "")
         mrtrix_available = all(self.check_dependency(cmd) for cmd in mrtrix_commands)
+        
+        if not mrtrix_available and mrtrix_custom_path:
+            mrtrix_available = self._check_commands_in_path(mrtrix_commands, mrtrix_custom_path)
+        
         status["MRtrix3"] = {
             "available": mrtrix_available,
             "commands": mrtrix_commands,
-            "custom_path": self.get("external_dependencies.mrtrix_path", "")
+            "custom_path": mrtrix_custom_path
         }
         
         # Check FreeSurfer commands
         freesurfer_commands = ["recon-all", "freeview"]
+        freesurfer_custom_path = self.get("external_dependencies.freesurfer_home", "")
         freesurfer_available = all(self.check_dependency(cmd) for cmd in freesurfer_commands)
+        
+        if not freesurfer_available and freesurfer_custom_path:
+            freesurfer_available = self._check_commands_in_path(freesurfer_commands, freesurfer_custom_path)
+        
         status["FreeSurfer"] = {
             "available": freesurfer_available,
             "commands": freesurfer_commands,
-            "custom_path": self.get("external_dependencies.freesurfer_home", ""),
+            "custom_path": freesurfer_custom_path,
             "license_path": self.get("external_dependencies.freesurfer_license", "")
         }
         
         # Check FastSurfer (run_fastsurfer.sh)
         fastsurfer_commands = ["run_fastsurfer.sh"]
+        fastsurfer_custom_path = self.get("external_dependencies.fastsurfer_home", "")
         fastsurfer_available = self.check_dependency("run_fastsurfer.sh")
+        
+        if not fastsurfer_available and fastsurfer_custom_path:
+            fastsurfer_available = self._check_commands_in_path(fastsurfer_commands, fastsurfer_custom_path)
+        
         status["FastSurfer"] = {
             "available": fastsurfer_available,
             "commands": fastsurfer_commands,
-            "custom_path": self.get("external_dependencies.fastsurfer_home", "")
+            "custom_path": fastsurfer_custom_path
         }
         
         return status
+    
+    def _check_commands_in_path(self, commands, base_path):
+        """
+        Check if commands exist in a custom path.
+        Checks both the base path and base_path/bin directory.
+        """
+        if not base_path or not os.path.exists(base_path):
+            return False
+        
+        # Check in base path
+        for cmd in commands:
+            cmd_path = os.path.join(base_path, cmd)
+            if os.path.exists(cmd_path) and os.access(cmd_path, os.X_OK):
+                continue
+            
+            # Check in bin subdirectory
+            bin_path = os.path.join(base_path, "bin", cmd)
+            if os.path.exists(bin_path) and os.access(bin_path, os.X_OK):
+                continue
+            
+            # Command not found
+            return False
+        
+        return True
     
     def detect_freesurfer_installations(self):
         """
