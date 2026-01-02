@@ -52,7 +52,7 @@ class CLAP(ctk.CTk):
         sidebar_title_card.grid(row=0, column=0, sticky="nswe", padx=(20,0), pady=20)
         sidebar_title_card.grid_columnconfigure(0, weight=1, minsize=200)
 
-        logo_label = ctk.CTkLabel(sidebar_title_card, text="C.L.A.P. 👏🏻", font=ctk.CTkFont(size=20, weight="bold"),corner_radius=0)
+        logo_label = ctk.CTkLabel(sidebar_title_card, text="C.L.A.P.", font=ctk.CTkFont(size=20, weight="bold"),corner_radius=0)
         logo_label.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
         logo_label.bind("<Button-1>", self.play_clapping_sound)
 
@@ -68,7 +68,7 @@ class CLAP(ctk.CTk):
         sidebar_button_card.grid_rowconfigure(0, weight=1)
 
         # Sidebar buttons
-        self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools ▼", fg_color="#0078D7", command=self.toggle_tools_menu)
+        self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
         self.sidebar_btn_1.grid(row=1, column=0, padx=5, pady=20)
 
         # Tools drawer
@@ -87,10 +87,10 @@ class CLAP(ctk.CTk):
         self.bt_btn_4.pack(fill="x", padx=10, pady=5)
         
         # Additional buttons (Settings and History)
-        self.sidebar_btn_2 = ctk.CTkButton(sidebar_button_card, text="Settings ⚙️", fg_color="#0078D7", command=self.setup_settings_page)
+        self.sidebar_btn_2 = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color="#0078D7", command=self.setup_settings_page)
         self.sidebar_btn_2.grid(row=2, column=0, padx=5, pady=10)
         
-        self.sidebar_btn_3 = ctk.CTkButton(sidebar_button_card, text="History 📋", fg_color="#0078D7", command=self.setup_history_page)
+        self.sidebar_btn_3 = ctk.CTkButton(sidebar_button_card, text="History", fg_color="#0078D7", command=self.setup_history_page)
         self.sidebar_btn_3.grid(row=3, column=0, padx=5, pady=10)
         
         # Task status frame (appears when task is running)
@@ -135,11 +135,11 @@ class CLAP(ctk.CTk):
     def toggle_tools_menu(self):
         if self.tools_drawer.winfo_viewable():
             self.tools_drawer.grid_forget()
-            self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+            self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
             self.settings_manager.set("tools_menu_expanded", False)
         else:
             self.tools_drawer.grid(row=0, column=0, sticky="sew")
-            self.sidebar_btn_1.configure(text="Tools ▲", fg_color="#004E81")
+            self.sidebar_btn_1.configure(text="Tools", fg_color="#004E81")
             self.settings_manager.set("tools_menu_expanded", True)
     
     def _restore_ui_state(self):
@@ -147,7 +147,7 @@ class CLAP(ctk.CTk):
         # Restore menu expansion state
         if self.settings_manager.get("tools_menu_expanded", False):
             self.tools_drawer.grid(row=0, column=0, sticky="sew")
-            self.sidebar_btn_1.configure(text="Tools ▲", fg_color="#004E81")
+            self.sidebar_btn_1.configure(text="Tools", fg_color="#004E81")
         
         # Restore last page
         last_page = self.settings_manager.get("last_page", "home")
@@ -211,7 +211,7 @@ class CLAP(ctk.CTk):
 
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
 
         # Create Home page card
         home_card = ctk.CTkFrame(
@@ -248,7 +248,7 @@ class CLAP(ctk.CTk):
 
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
 
         # Setup new page
         self.registration_tools_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
@@ -361,7 +361,7 @@ class CLAP(ctk.CTk):
 
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
 
         # Setup new page
 
@@ -515,7 +515,7 @@ class CLAP(ctk.CTk):
 
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
 
         # Setup new page
         self.ROI_toolbox_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
@@ -630,7 +630,7 @@ class CLAP(ctk.CTk):
         
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
         
         # Setup new page
         self.settings_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
@@ -774,7 +774,7 @@ class CLAP(ctk.CTk):
         
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
         
         # Setup new page
         self.history_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
