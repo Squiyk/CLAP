@@ -8,17 +8,28 @@ import XC_XFM_TOOLBOX
 import XC_CONNECTOME_TOOLBOX
 import XC_ROI_TOOLBOX
 import pygame
+from clap_settings import SettingsManager
+from clap_task_logger import TaskLogger
 
 class CLAP(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         pygame.mixer.init()
+        
+        # Initialize settings and task logger
+        self.settings_manager = SettingsManager()
+        self.task_logger = TaskLogger()
+        self.current_task_thread = None
+        self.current_task_id = None
+        self.cancel_task_flag = False
 
         self.title("CONNECT LAB ANALYSIS PIPELINE")
         self.geometry("1300x850")
 
-        ctk.set_appearance_mode("System")
+        # Apply saved appearance settings
+        appearance_mode = self.settings_manager.get("appearance_mode", "System")
+        ctk.set_appearance_mode(appearance_mode)
         ctk.set_default_color_theme("blue")
 
         self.grid_columnconfigure(0, weight=0,minsize=200)
@@ -73,20 +84,54 @@ class CLAP(ctk.CTk):
 
         self.bt_btn_4 = ctk.CTkButton(self.tools_drawer, text="ROI Parcelation Toolbox", command=self.setup_ROI_toolbox_page)
         self.bt_btn_4.pack(fill="x", padx=10, pady=5)
+        
+        # Additional buttons (Settings and History)
+        self.sidebar_btn_2 = ctk.CTkButton(sidebar_button_card, text="Settings ⚙️", fg_color="#0078D7", command=self.setup_settings_page)
+        self.sidebar_btn_2.grid(row=2, column=0, padx=5, pady=10)
+        
+        self.sidebar_btn_3 = ctk.CTkButton(sidebar_button_card, text="History 📋", fg_color="#0078D7", command=self.setup_history_page)
+        self.sidebar_btn_3.grid(row=3, column=0, padx=5, pady=10)
 
         #### Populating main pannel ####
         self.main_pannel = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.main_pannel.grid(row=0, column=1, sticky="nswe")
 
-        self.setup_home_page()
+        # Restore last page and menu state
+        self._restore_ui_state()
 
     def toggle_tools_menu(self):
         if self.tools_drawer.winfo_viewable():
             self.tools_drawer.grid_forget()
             self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+            self.settings_manager.set("tools_menu_expanded", False)
         else:
             self.tools_drawer.grid(row=0, column=0, sticky="sew")
             self.sidebar_btn_1.configure(text="Tools ▲", fg_color="#004E81")
+            self.settings_manager.set("tools_menu_expanded", True)
+    
+    def _restore_ui_state(self):
+        """Restore UI state from settings"""
+        # Restore menu expansion state
+        if self.settings_manager.get("tools_menu_expanded", False):
+            self.tools_drawer.grid(row=0, column=0, sticky="sew")
+            self.sidebar_btn_1.configure(text="Tools ▲", fg_color="#004E81")
+        
+        # Restore last page
+        last_page = self.settings_manager.get("last_page", "home")
+        page_methods = {
+            "home": self.setup_home_page,
+            "registration": self.setup_registration_tools_page,
+            "connectome": self.setup_connectome_toolbox_page,
+            "roi": self.setup_ROI_toolbox_page,
+            "settings": self.setup_settings_page,
+            "history": self.setup_history_page
+        }
+        page_method = page_methods.get(last_page, self.setup_home_page)
+        page_method()
+    
+    def _save_current_page(self, page_name):
+        """Save current page to settings"""
+        self.settings_manager.set("last_page", page_name)
 
     def clear_main_pannel(self):
         for widget in self.main_pannel.winfo_children():
@@ -98,6 +143,7 @@ class CLAP(ctk.CTk):
     def setup_home_page(self):
 
         self.clear_main_pannel()
+        self._save_current_page("home")
 
         self.home_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
         self.home_page.pack(fill="both", expand=True)
@@ -137,6 +183,7 @@ class CLAP(ctk.CTk):
 
         # Remove previous page
         self.clear_main_pannel()
+        self._save_current_page("registration")
 
         # Close tool menu
         self.tools_drawer.grid_forget()
@@ -249,6 +296,7 @@ class CLAP(ctk.CTk):
 
         # Remove previous page
         self.clear_main_pannel()
+        self._save_current_page("connectome")
 
         # Close tool menu
         self.tools_drawer.grid_forget()
@@ -402,6 +450,7 @@ class CLAP(ctk.CTk):
 
         # Remove previous page
         self.clear_main_pannel()
+        self._save_current_page("roi")
 
         # Close tool menu
         self.tools_drawer.grid_forget()
@@ -512,6 +561,326 @@ class CLAP(ctk.CTk):
         )
         run_seeg_roi_mask_tool_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
         
+
+    def setup_settings_page(self):
+        """Setup the settings page"""
+        self.clear_main_pannel()
+        self._save_current_page("settings")
+        
+        # Close tool menu
+        self.tools_drawer.grid_forget()
+        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        
+        # Setup new page
+        self.settings_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
+        self.settings_page.pack(fill="both", expand=True)
+        self.settings_page.grid_columnconfigure(0, weight=1)
+        
+        # Page title
+        title_label = ctk.CTkLabel(
+            self.settings_page,
+            text="Settings",
+            font=ctk.CTkFont(family="Proxima Nova", size=24, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        title_label.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="w")
+        
+        # External Dependencies Section
+        deps_frame = ctk.CTkFrame(
+            self.settings_page,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        deps_frame.grid(row=1, column=0, pady=20, padx=20, sticky="ew")
+        deps_frame.columnconfigure(1, weight=1)
+        
+        deps_label = ctk.CTkLabel(
+            deps_frame,
+            text="External Dependencies",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        deps_label.grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 10), sticky="w")
+        
+        # Check dependency status
+        dep_status = self.settings_manager.get_dependency_status()
+        
+        row_idx = 1
+        for dep_name, dep_info in dep_status.items():
+            # Dependency name
+            name_label = ctk.CTkLabel(
+                deps_frame,
+                text=f"{dep_name}:",
+                font=ctk.CTkFont(family="Proxima Nova", size=14, weight="bold"),
+                text_color=("gray30", "gray80")
+            )
+            name_label.grid(row=row_idx, column=0, padx=(20, 10), pady=10, sticky="w")
+            
+            # Status indicator
+            if dep_info["available"]:
+                status_text = "✓ Available"
+                status_color = "green"
+            else:
+                status_text = "✗ Not Found"
+                status_color = "red"
+            
+            status_label = ctk.CTkLabel(
+                deps_frame,
+                text=status_text,
+                font=ctk.CTkFont(family="Proxima Nova", size=14),
+                text_color=status_color
+            )
+            status_label.grid(row=row_idx, column=1, padx=10, pady=10, sticky="w")
+            
+            # Commands list
+            row_idx += 1
+            commands_text = "Commands: " + ", ".join(dep_info["commands"])
+            commands_label = ctk.CTkLabel(
+                deps_frame,
+                text=commands_text,
+                font=ctk.CTkFont(family="Proxima Nova", size=12),
+                text_color=("gray40", "gray70")
+            )
+            commands_label.grid(row=row_idx, column=0, columnspan=3, padx=(40, 20), pady=(0, 10), sticky="w")
+            
+            row_idx += 1
+        
+        # Refresh button
+        refresh_btn = ctk.CTkButton(
+            deps_frame,
+            text="Refresh Status",
+            height=35,
+            fg_color="#0078D7",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=self.setup_settings_page
+        )
+        refresh_btn.grid(row=row_idx, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+        
+        # Appearance Settings Section
+        appearance_frame = ctk.CTkFrame(
+            self.settings_page,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        appearance_frame.grid(row=2, column=0, pady=20, padx=20, sticky="ew")
+        appearance_frame.columnconfigure(1, weight=1)
+        
+        appearance_label = ctk.CTkLabel(
+            appearance_frame,
+            text="Appearance",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        appearance_label.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 10), sticky="w")
+        
+        # Appearance mode selector
+        mode_label = ctk.CTkLabel(
+            appearance_frame,
+            text="Appearance Mode:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        mode_label.grid(row=1, column=0, padx=(20, 10), pady=10, sticky="w")
+        
+        self.appearance_mode_menu = ctk.CTkOptionMenu(
+            appearance_frame,
+            values=["System", "Light", "Dark"],
+            command=self.change_appearance_mode
+        )
+        current_mode = self.settings_manager.get("appearance_mode", "System")
+        self.appearance_mode_menu.set(current_mode)
+        self.appearance_mode_menu.grid(row=1, column=1, padx=(10, 20), pady=10, sticky="w")
+
+
+    def setup_history_page(self):
+        """Setup the task history page"""
+        self.clear_main_pannel()
+        self._save_current_page("history")
+        
+        # Close tool menu
+        self.tools_drawer.grid_forget()
+        self.sidebar_btn_1.configure(text="Tools ▼", fg_color="#0078D7")
+        
+        # Setup new page
+        self.history_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
+        self.history_page.pack(fill="both", expand=True, padx=20, pady=20)
+        self.history_page.grid_columnconfigure(0, weight=1)
+        self.history_page.grid_rowconfigure(1, weight=1)
+        
+        # Page title and controls
+        header_frame = ctk.CTkFrame(self.history_page, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header_frame.grid_columnconfigure(0, weight=1)
+        
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="Task History",
+            font=ctk.CTkFont(family="Proxima Nova", size=24, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        title_label.grid(row=0, column=0, padx=0, pady=0, sticky="w")
+        
+        clear_btn = ctk.CTkButton(
+            header_frame,
+            text="Clear History",
+            height=35,
+            fg_color="#DC3545",
+            hover_color="#C82333",
+            font=ctk.CTkFont(family="Proxima Nova", size=13),
+            command=self.clear_task_history
+        )
+        clear_btn.grid(row=0, column=1, padx=10, pady=0, sticky="e")
+        
+        # Task history list
+        history_list_frame = ctk.CTkScrollableFrame(
+            self.history_page,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        history_list_frame.grid(row=1, column=0, sticky="nsew")
+        history_list_frame.grid_columnconfigure(0, weight=1)
+        
+        # Get task history
+        tasks = self.task_logger.get_recent_tasks(100)
+        
+        if not tasks:
+            no_tasks_label = ctk.CTkLabel(
+                history_list_frame,
+                text="No task history yet",
+                font=ctk.CTkFont(family="Proxima Nova", size=14),
+                text_color=("gray40", "gray70")
+            )
+            no_tasks_label.grid(row=0, column=0, padx=20, pady=20)
+        else:
+            for idx, task in enumerate(tasks):
+                self._create_task_entry(history_list_frame, idx, task)
+    
+    def _create_task_entry(self, parent, idx, task):
+        """Create a single task entry in the history list"""
+        task_frame = ctk.CTkFrame(
+            parent,
+            fg_color=("gray95", "#1E1E1E"),
+            corner_radius=5,
+            border_width=1,
+            border_color=("#D0D0D0", "#404040")
+        )
+        task_frame.grid(row=idx, column=0, padx=10, pady=5, sticky="ew")
+        task_frame.grid_columnconfigure(1, weight=1)
+        
+        # Status indicator
+        status_colors = {
+            "completed": "green",
+            "running": "orange",
+            "failed": "red",
+            "interrupted": "orange"
+        }
+        status_color = status_colors.get(task["status"], "gray")
+        
+        status_label = ctk.CTkLabel(
+            task_frame,
+            text="●",
+            font=ctk.CTkFont(size=20),
+            text_color=status_color,
+            width=30
+        )
+        status_label.grid(row=0, column=0, rowspan=4, padx=(10, 5), pady=10)
+        
+        # Task name and type
+        name_label = ctk.CTkLabel(
+            task_frame,
+            text=f"{task['name']} ({task['type']})",
+            font=ctk.CTkFont(family="Proxima Nova", size=14, weight="bold"),
+            text_color=("gray10", "gray90"),
+            anchor="w"
+        )
+        name_label.grid(row=0, column=1, padx=10, pady=(10, 2), sticky="w")
+        
+        # Time info
+        from datetime import datetime
+        try:
+            start_time = datetime.fromisoformat(task["start_time"])
+            time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            if task["end_time"]:
+                end_time = datetime.fromisoformat(task["end_time"])
+                duration = (end_time - start_time).total_seconds()
+                time_str += f" | Duration: {duration:.1f}s"
+        except:
+            time_str = "Unknown time"
+        
+        time_label = ctk.CTkLabel(
+            task_frame,
+            text=time_str,
+            font=ctk.CTkFont(family="Proxima Nova", size=11),
+            text_color=("gray40", "gray70"),
+            anchor="w"
+        )
+        time_label.grid(row=1, column=1, padx=10, pady=(2, 2), sticky="w")
+        
+        # Input files (if any)
+        if task.get("input_files") and len(task["input_files"]) > 0:
+            input_count = len(task["input_files"])
+            if input_count <= 2:
+                input_text = "Input: " + ", ".join([Path(f).name for f in task["input_files"]])
+            else:
+                first_file = Path(task["input_files"][0]).name
+                input_text = f"Input: {first_file} and {input_count - 1} more file(s)"
+            
+            input_label = ctk.CTkLabel(
+                task_frame,
+                text=input_text,
+                font=ctk.CTkFont(family="Proxima Nova", size=10),
+                text_color=("gray50", "gray60"),
+                anchor="w"
+            )
+            input_label.grid(row=2, column=1, padx=10, pady=(2, 2), sticky="w")
+        
+        # Output location (if any)
+        if task.get("output_location"):
+            output_text = f"Output: {task['output_location']}"
+            output_label = ctk.CTkLabel(
+                task_frame,
+                text=output_text,
+                font=ctk.CTkFont(family="Proxima Nova", size=10),
+                text_color=("gray50", "gray60"),
+                anchor="w"
+            )
+            output_label.grid(row=3, column=1, padx=10, pady=(2, 10), sticky="w")
+        else:
+            # Adjust padding if no output location
+            time_label.grid(pady=(2, 10))
+        
+        # Status text
+        status_text = task["status"].capitalize()
+        if task.get("error_message"):
+            status_text += f" - {task['error_message']}"
+        
+        status_text_label = ctk.CTkLabel(
+            task_frame,
+            text=status_text,
+            font=ctk.CTkFont(family="Proxima Nova", size=12),
+            text_color=("gray30", "gray80"),
+            anchor="e"
+        )
+        status_text_label.grid(row=0, column=2, rowspan=4, padx=10, pady=10, sticky="e")
+    
+    def change_appearance_mode(self, new_mode):
+        """Change application appearance mode"""
+        ctk.set_appearance_mode(new_mode)
+        self.settings_manager.set("appearance_mode", new_mode)
+    
+    def clear_task_history(self):
+        """Clear all task history"""
+        if messagebox.askyesno("Clear History", "Are you sure you want to clear all task history?"):
+            self.task_logger.clear_history()
+            self.setup_history_page()  # Refresh the page
+
 
 ### HELPER FUNCTIONS ###
 
@@ -641,10 +1010,26 @@ class CLAP(ctk.CTk):
         if not out or not fixed or not moving_list:
             messagebox.showerror("Error", "Please provide all required inputs for registration.")
             return
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "New Registration",
+            "Registration",
+            f"{len(moving_list)} image(s)",
+            input_files=[fixed] + moving_list,
+            output_location=out
+        )
+        
         task = threading.Thread(target=XC_XFM_TOOLBOX.new_xfm, args=(out, fixed, moving_list, self.on_registration_complete))
+        self.current_task_thread = task
         task.start()
 
     def on_registration_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
         self.after(0,self.show_new_registration_complete_message)
 
     def show_new_registration_complete_message(self):
@@ -665,11 +1050,26 @@ class CLAP(ctk.CTk):
             if not out_dir or not reference or not moving_list or not transform_list:
                 messagebox.showerror("Input Error", "Please provide Reference, Output, at least one Moving Image, and at least one Transform.")
                 return
+            
+            # Log task start
+            self.current_task_id = self.task_logger.start_task(
+                "Apply Transform",
+                "Registration",
+                f"{len(moving_list)} image(s)",
+                input_files=moving_list + transform_list + [reference],
+                output_location=out_dir
+            )
 
             task = threading.Thread(target=XC_XFM_TOOLBOX.apply_existing_xfm, args=(out_dir, transform_list, moving_list, reference, self.on_apply_transform_complete))
+            self.current_task_thread = task
             task.start()
 
     def on_apply_transform_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
         self.after(0,self.show_apply_transform_complete_message)
         
     def show_apply_transform_complete_message(self):
@@ -693,11 +1093,26 @@ class CLAP(ctk.CTk):
         if not mask_image or not tracks_list:
             messagebox.showerror("Input Error", "Please provide Mask Image, at least one Track file and an output directory.")
             return
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "Generate Connectomes",
+            "Connectome",
+            f"{len(tracks_list)} track(s)",
+            input_files=[mask_image] + tracks_list + tracks_weights_list,
+            output_location=output_dir
+        )
 
         task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete))
+        self.current_task_thread = task
         task.start()
 
     def on_connectome_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
         self.after(0,self.show_connectome_complete_message)
 
     def show_connectome_complete_message(self):
@@ -713,11 +1128,26 @@ class CLAP(ctk.CTk):
         if not subject_connectome or not ref_connectomes_list or not output_dir:
             messagebox.showerror("Input Error", "Please provide Subject Connectome, Reference Connectomes, and Output Directory.")
             return
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "Z-Score Connectome",
+            "Connectome",
+            f"{len(ref_connectomes_list)} reference(s)",
+            input_files=[subject_connectome] + ref_connectomes_list,
+            output_location=output_dir
+        )
 
         task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete))
+        self.current_task_thread = task
         task.start()
 
     def on_z_score_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
         self.after(0,self.show_z_score_complete_message)
 
     def show_z_score_complete_message(self):
@@ -733,6 +1163,15 @@ class CLAP(ctk.CTk):
         if not cnctms_list or not luts_list:
             messagebox.showerror("Input Error", "Please provide at least one Connectome and one LUT file.")
             return
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "Display Connectomes",
+            "Connectome",
+            f"{len(cnctms_list)} connectome(s)",
+            input_files=cnctms_list + luts_list,
+            output_location="Display only"
+        )
         
         lut_map = {}
         for lut in luts_list:
@@ -752,9 +1191,15 @@ class CLAP(ctk.CTk):
             return
 
         task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.display_connectome, args=(paired_data, self.on_display_complete))
+        self.current_task_thread = task
         task.start()
     
     def on_display_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
         self.after(0,self.show_display_complete_message)
 
     def show_display_complete_message(self):
@@ -779,11 +1224,26 @@ class CLAP(ctk.CTk):
         if not ref_mask_img or not seeg_coords_file or not output_dir:
             messagebox.showerror("Input Error", "Please provide Reference Mask Image, SEEG Coordinates File, and Output Directory.")
             return
+        
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            "Generate SEEG ROI Masks",
+            "ROI Toolbox",
+            f"Mode: {raw_mode}, Radius: {sel_rad}mm",
+            input_files=[ref_mask_img, seeg_coords_file],
+            output_location=output_dir
+        )
 
         task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete))
+        self.current_task_thread = task
         task.start()
 
     def on_seeg_roi_mask_complete(self):
+        # Log task completion
+        if self.current_task_id is not None:
+            self.task_logger.complete_task(self.current_task_id, "completed")
+            self.current_task_id = None
+        self.current_task_thread = None
         self.after(0,self.show_seeg_roi_mask_complete_message)
 
     def show_seeg_roi_mask_complete_message(self):

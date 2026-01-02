@@ -1,3 +1,5 @@
 .DS_Store
 __pycache__/
-*.pyccomplementary_files/clap_env/
+*.pyc
+complementary_files/clap_env/
+user_data/
