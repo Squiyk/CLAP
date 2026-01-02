@@ -208,9 +208,14 @@ class CLAP(ctk.CTk):
             # Handle different widget types
             if hasattr(widget, 'get'):
                 value = widget.get()
-                # For textboxes, get returns method, need to call it
-                if callable(value):
-                    value = value("0.0", "end").strip()
+                # For textboxes, get() method is called directly with arguments
+                if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
+                    # Check if it's a textbox by trying to get with textbox arguments
+                    try:
+                        value = widget.get("0.0", "end").strip()
+                    except:
+                        # It's an Entry widget, value is already retrieved
+                        pass
                 self.form_values[field_name] = value
         except Exception:
             pass
@@ -242,9 +247,7 @@ class CLAP(ctk.CTk):
         """Save all form values for a specific page before destroying it"""
         if page_name == "registration":
             # Clear previous registration values first
-            keys_to_remove = [k for k in self.form_values.keys() if k.startswith('reg_')]
-            for key in keys_to_remove:
-                del self.form_values[key]
+            self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith('reg_')}
             
             # Save registration page fields
             if hasattr(self, 'entry_destination_space'):
@@ -264,9 +267,7 @@ class CLAP(ctk.CTk):
         
         elif page_name == "connectome":
             # Clear previous connectome values first
-            keys_to_remove = [k for k in self.form_values.keys() if k.startswith('con_')]
-            for key in keys_to_remove:
-                del self.form_values[key]
+            self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith('con_')}
             
             # Save connectome page fields
             if hasattr(self, 'entry_mask_img_cntcm'):
@@ -290,9 +291,7 @@ class CLAP(ctk.CTk):
         
         elif page_name == "roi":
             # Clear previous ROI values first
-            keys_to_remove = [k for k in self.form_values.keys() if k.startswith('roi_')]
-            for key in keys_to_remove:
-                del self.form_values[key]
+            self.form_values = {k: v for k, v in self.form_values.items() if not k.startswith('roi_')}
             
             # Save ROI page fields
             if hasattr(self, 'entry_ref_mask_img'):
