@@ -659,7 +659,7 @@ class CLAP(ctk.CTk):
         
         deps_label = ctk.CTkLabel(
             deps_frame,
-            text="External Dependencies",
+            text="External Dependencies (Auto-checked)",
             font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90")
         )
@@ -707,6 +707,16 @@ class CLAP(ctk.CTk):
             commands_label.grid(row=row_idx, column=0, columnspan=3, padx=(40, 20), pady=(0, 10), sticky="w")
             
             row_idx += 1
+        
+        # Add timestamp of check
+        check_time_label = ctk.CTkLabel(
+            deps_frame,
+            text=f"Last checked: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            font=ctk.CTkFont(family="Proxima Nova", size=11, slant="italic"),
+            text_color=("gray50", "gray60")
+        )
+        check_time_label.grid(row=row_idx, column=0, columnspan=3, padx=20, pady=(5, 5), sticky="w")
+        row_idx += 1
         
         # Refresh button
         refresh_btn = ctk.CTkButton(

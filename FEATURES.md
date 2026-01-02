@@ -4,11 +4,11 @@
 
 The Settings page allows you to:
 
-- **Check External Dependencies**: View the installation status of required external tools:
+- **Check External Dependencies**: Dependencies are **automatically checked** each time you open the Settings page. The status shows whether required external tools are available:
   - ANTs (antsRegistrationSyN.sh, antsApplyTransforms)
   - MRtrix3 (tck2connectome)
 - **Configure Appearance**: Change between Light, Dark, and System appearance modes
-- **Refresh Status**: Update the dependency status check
+- **Refresh Status**: Manually refresh the dependency status check if needed
 
 ### External Dependencies
 
@@ -60,7 +60,7 @@ This directory is automatically created on first run and is excluded from Git tr
 
 ## Usage Tips
 
-1. **Check Dependencies First**: Visit the Settings page after installation to verify all required tools are available
+1. **Check Dependencies First**: Visit the Settings page after installation to verify all required tools are available. Dependencies are automatically checked when the page opens.
 2. **Review Task History**: Use the History page to track your work and locate output files
 3. **Cancel Long Tasks**: If a task is taking too long or was started by mistake, use the Cancel button
 4. **Clear Old History**: Periodically clear task history to keep the log manageable

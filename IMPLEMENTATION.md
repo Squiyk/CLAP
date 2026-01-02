@@ -12,11 +12,13 @@ This implementation adds comprehensive task management, settings, and logging fe
 
 **Features:**
 - External dependency checker for ANTs and MRtrix3
+  - **Automatically checks** when Settings page is opened
   - Checks for `antsRegistrationSyN.sh`, `antsApplyTransforms` (ANTs)
   - Checks for `tck2connectome` (MRtrix3)
   - Visual indicators (✓ Available / ✗ Not Found)
+  - Displays timestamp of last check
 - Appearance mode selector (Light/Dark/System)
-- Refresh button to update dependency status
+- Manual refresh button to re-check dependencies
 
 **Implementation:**
 - `clap_settings.py`: SettingsManager class
