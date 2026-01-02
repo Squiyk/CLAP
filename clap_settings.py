@@ -204,7 +204,7 @@ class SettingsManager:
         ]
         
         # Also check versioned paths
-        for major_version in range(self.FREESURFER_MIN_VERSION, self.FREESURFER_MAX_VERSION):
+        for major_version in range(self.FREESURFER_MIN_VERSION, self.FREESURFER_MAX_VERSION + 1):
             for minor_version in range(0, self.FREESURFER_MAX_MINOR):
                 common_paths.append(f"/usr/local/freesurfer/{major_version}.{minor_version}")
                 common_paths.append(f"/Applications/freesurfer/{major_version}.{minor_version}")
@@ -263,7 +263,8 @@ class SettingsManager:
         # Try alternate approach: check directory name
         # Validate against FREESURFER_MIN_VERSION and FREESURFER_MAX_VERSION
         dir_name = os.path.basename(freesurfer_home.rstrip('/'))
-        # Match version pattern and validate range
+        # Use word boundary pattern (unlike build-stamp which uses strict anchors)
+        # since directory names may contain version as part of a longer string
         match = re.search(r'\b(\d+\.\d+)(?:\.\d+)?\b', dir_name)
         if match:
             version = match.group(1)
