@@ -11,44 +11,44 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
     mask_filename = os.path.basename(mask_image)
     mask_name_clean = mask_filename.replace(".nii", "").replace(".gz", "")
     
-    final_output_folder = os.path.join(output_dir, f"Connectomes_{mask_name_clean}")
-    os.makedirs(final_output_folder, exist_ok=True)
+    output_folder = os.path.join(output_dir, f"Connectomes_{mask_name_clean}")
+    os.makedirs(output_folder, exist_ok=True)
 
     # Run
-    for tck_path in tracks_list:
+    for track_path in tracks_list:
         # Check for cancellation before processing each track
         if cancel_checker and cancel_checker():
             print("Connectome generation cancelled by user")
             return
         
-        tck_path = tck_path.strip()
-        if not tck_path or not os.path.exists(tck_path):
+        track_path = track_path.strip()
+        if not track_path or not os.path.exists(track_path):
             continue
 
-        tck_name = os.path.splitext(os.path.basename(tck_path))[0]
-        output_csv_path = os.path.join(final_output_folder, f"{tck_name}_connectome.csv")
+        track_name = os.path.splitext(os.path.basename(track_path))[0]
+        output_csv_path = os.path.join(output_folder, f"{track_name}_connectome.csv")
 
-        found_weights = None
+        weights_file = None
 
         if tracks_weights_list:
             for weight_path in tracks_weights_list:
                 weight_path = weight_path.strip()
                 if not weight_path:
                     continue
-                w_stem = os.path.splitext(os.path.basename(weight_path))[0]
-                if w_stem == tck_name:
-                    found_weights = weight_path
+                weight_stem = os.path.splitext(os.path.basename(weight_path))[0]
+                if weight_stem == track_name:
+                    weights_file = weight_path
                     break
 
         cmd = [
             "tck2connectome",
-            tck_path,           
+            track_path,           
             mask_image,
             output_csv_path
         ]
 
-        if found_weights:
-            cmd.extend(["-tck_weights_in", found_weights])
+        if weights_file:
+            cmd.extend(["-tck_weights_in", weights_file])
 
         cmd.append("-force")
 
@@ -64,14 +64,14 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
             # Poll the process and check for cancellation
             while process.poll() is None:
                 if cancel_checker and cancel_checker():
-                    print(f"Cancelling connectome generation for {tck_name}")
+                    print(f"Cancelling connectome generation for {track_name}")
                     process.terminate()
                     try:
                         process.wait(timeout=5)
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait()
-                    print(f"Connectome generation cancelled: {tck_name}")
+                    print(f"Connectome generation cancelled: {track_name}")
                     return
             
             # Check if process completed successfully
@@ -79,10 +79,10 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
                 print(f"Created: {os.path.basename(output_csv_path)}")
             else:
                 stderr = process.stderr.read() if process.stderr else ""
-                print(f"Command Failed for {tck_name}:\n{stderr}")
+                print(f"Command Failed for {track_name}:\n{stderr}")
                 
         except Exception as e:
-            print(f"Critical Error on {tck_name}: {e}")
+            print(f"Critical Error on {track_name}: {e}")
 
     print("Batch Generation Complete.")
 
@@ -90,7 +90,7 @@ def gen_connectome(mask_image, tracks_list, output_dir, tracks_weights_list=None
     if on_complete:
         on_complete()
 
-def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None, cancel_checker=None):
+def z_scored_connectome(subject_connectome, reference_connectomes, output_dir, on_complete=None, cancel_checker=None):
 
     try:
         # Check for cancellation at the start
@@ -100,11 +100,11 @@ def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None,
         
         # Load the subject matrix
 
-        subject_matrix = np.loadtxt(sub_cnctm, delimiter=',')
+        subject_matrix = np.loadtxt(subject_connectome, delimiter=',')
         
         # Load reference matrices
         ref_matrices = []
-        for path in ref_cnctm_list:
+        for path in reference_connectomes:
             # Check for cancellation while loading references
             if cancel_checker and cancel_checker():
                 print("Z-score computation cancelled by user")
@@ -137,9 +137,9 @@ def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None,
 
         # 6. Formatting the output filename
 
-        sub_basename = os.path.basename(sub_cnctm)
-        sub_raw_name = os.path.splitext(sub_basename)[0]
-        output_name = f"{sub_raw_name}_zscored.csv"
+        subject_basename = os.path.basename(subject_connectome)
+        subject_name = os.path.splitext(subject_basename)[0]
+        output_name = f"{subject_name}_zscored.csv"
         
         # Create output path
         output_path = os.path.join(output_dir, output_name)
@@ -157,12 +157,12 @@ def z_scored_connectome(sub_cnctm, ref_cnctm_list, output_dir, on_complete=None,
 
 def display_connectome(paired_data, on_complete=None):
     
-    n_to_display = len(paired_data)
-    if n_to_display > 4:
+    num_to_display = len(paired_data)
+    if num_to_display > 4:
         cols = 4
     else:
-        cols = n_to_display
-    rows = (n_to_display + cols -1) // cols
+        cols = num_to_display
+    rows = (num_to_display + cols -1) // cols
 
     fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 5*rows), squeeze=False)
     fig.canvas.manager.set_window_title('Connectome Viewer')

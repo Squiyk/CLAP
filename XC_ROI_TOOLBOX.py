@@ -4,12 +4,12 @@ import numpy as np
 import matplotlib.cm as cm
 import re
 
-def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, on_complete=None, cancel_checker=None):
+def generate_seeg_roi_masks(reference_mask_image, seeg_coords_file, output_dir, sphere_radius, is_bipolar_mode, on_complete=None, cancel_checker=None):
 
-    ref_path = Path(ref_mask_img)
+    reference_path = Path(reference_mask_image)
     coords_path = Path(seeg_coords_file)
     output_dir_path = Path(output_dir)
-    Radius_mm = sel_rad
+    radius_mm = sphere_radius
 
 
     try:
@@ -18,14 +18,14 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
             print("SEEG ROI mask generation cancelled by user")
             return
         
-        img = nib.load(ref_path)
+        img = nib.load(reference_path)
         affine = img.affine
         inv_affine = np.linalg.inv(affine)
         data_shape = img.shape
         zooms = img.header.get_zooms()[:3]
 
         mask_data = np.zeros(data_shape, dtype=np.int16)
-        clean_base = clean_subject_name(ref_path)
+        clean_base = clean_subject_name(reference_path)
 
         raw_contacts = []
         with coords_path.open('r') as f:
@@ -52,19 +52,19 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
 
         if is_bipolar_mode:
             for i in range(len(raw_contacts)-1):
-                c1 = raw_contacts[i]
-                c2 =raw_contacts[i+1]
+                contact1 = raw_contacts[i]
+                contact2 = raw_contacts[i+1]
 
-                match1 = re.search(r"^(.*?)(\d+)$", c1['name'])
-                match2 = re.search(r"^(.*?)(\d+)$", c2['name'])
+                match1 = re.search(r"^(.*?)(\d+)$", contact1['name'])
+                match2 = re.search(r"^(.*?)(\d+)$", contact2['name'])
 
                 if match1 and match2 and match1.group(1) == match2.group(1):
                     idx1 = int(match1.group(2))
                     idx2 = int(match2.group(2))
 
                     if abs(idx2-idx1) == 1:
-                        mid_coords = (c1['coords'] + c2['coords']) / 2
-                        new_name = f"{c1['name']}-{c2['name']}"
+                        mid_coords = (contact1['coords'] + contact2['coords']) / 2
+                        new_name = f"{contact1['name']}-{contact2['name']}"
 
                         final_contacts.append({'name': new_name, 'coords': mid_coords})
 
@@ -87,14 +87,14 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
             voxel_coords = nib.affines.apply_affine(inv_affine, world_coords)
             center_vox = np.round(voxel_coords).astype(int)
 
-            rad_vox = np.ceil(Radius_mm / np.min(zooms)).astype(int)
+            radius_vox = np.ceil(radius_mm / np.min(zooms)).astype(int)
 
-            x_min = max(0, center_vox[0] - rad_vox)
-            x_max = min(data_shape[0], center_vox[0] +rad_vox +1)
-            y_min = max(0, center_vox[1] - rad_vox)
-            y_max = min(data_shape[1], center_vox[1] +rad_vox +1)
-            z_min = max(0, center_vox[2] - rad_vox)
-            z_max = min(data_shape[2], center_vox[2] +rad_vox +1)
+            x_min = max(0, center_vox[0] - radius_vox)
+            x_max = min(data_shape[0], center_vox[0] + radius_vox + 1)
+            y_min = max(0, center_vox[1] - radius_vox)
+            y_max = min(data_shape[1], center_vox[1] + radius_vox + 1)
+            z_min = max(0, center_vox[2] - radius_vox)
+            z_max = min(data_shape[2], center_vox[2] + radius_vox + 1)
 
             for x in range(x_min, x_max):
                 for y in range(y_min, y_max):
@@ -102,7 +102,7 @@ def generate_seeg_roi_masks(ref_mask_img, seeg_coords_file, output_dir, sel_rad,
                         current_vox = np.array([x, y, z])
                         current_world = nib.affines.apply_affine(affine, current_vox)
                         dist = np.linalg.norm(current_world - world_coords)
-                        if dist <= Radius_mm:
+                        if dist <= radius_mm:
                             mask_data[x, y, z] = contact_id
             color = cm.nipy_spectral(float(i) / len(final_contacts))
             r, g, b = int(color[0]*255), int(color[1]*255), int(color[2]*255)

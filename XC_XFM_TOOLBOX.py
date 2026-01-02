@@ -1,19 +1,19 @@
 import os
 import subprocess
 
-def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, cancel_checker=None):
+def new_xfm(output_folder, fixed_image, moving_image, on_complete=None, cancel_checker=None):
     
     # Assess batch size
-    if isinstance(n_moving_image, list):
-        total_files = len(n_moving_image)
+    if isinstance(moving_image, list):
+        total_files = len(moving_image)
         
-        for single_file in n_moving_image:
+        for single_file in moving_image:
             # Check for cancellation before processing each file
             if cancel_checker and cancel_checker():
                 print("Registration cancelled by user")
                 return
             
-            new_xfm(n_output_folder, n_fixed_image, single_file, on_complete=None, cancel_checker=cancel_checker)
+            new_xfm(output_folder, fixed_image, single_file, on_complete=None, cancel_checker=cancel_checker)
         
         if on_complete:
             on_complete()
@@ -26,13 +26,13 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
         elif base.endswith(".nii"): return base[:-4]
         return os.path.splitext(base)[0]
 
-    mov_name = clean_name(n_moving_image)
-    fix_name = clean_name(n_fixed_image)
+    moving_name = clean_name(moving_image)
+    fixed_name = clean_name(fixed_image)
     
-    new_prefix = f"{mov_name}_{fix_name}space_"
-    full_output_path = os.path.join(n_output_folder, new_prefix)
+    output_prefix = f"{moving_name}_{fixed_name}space_"
+    full_output_path = os.path.join(output_folder, output_prefix)
     
-    print(f"Running ANTs on: {mov_name}")
+    print(f"Running ANTs on: {moving_name}")
 
     # Resource Allocation
     try:
@@ -51,8 +51,8 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
     cmd = [
         "antsRegistrationSyN.sh",
         "-d", "3",
-        "-f", n_fixed_image,
-        "-m", n_moving_image,
+        "-f", fixed_image,
+        "-m", moving_image,
         "-o", full_output_path,
         "-n", str(safe_threads)
     ]
@@ -63,24 +63,24 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
         # Poll the process and check for cancellation
         while process.poll() is None:
             if cancel_checker and cancel_checker():
-                print(f"Cancelling registration for {mov_name}")
+                print(f"Cancelling registration for {moving_name}")
                 process.terminate()
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
-                print(f"Registration cancelled: {mov_name}")
+                print(f"Registration cancelled: {moving_name}")
                 return
         
         # Check if process completed successfully
         if process.returncode == 0:
-            print(f"Success: {mov_name}")
+            print(f"Success: {moving_name}")
         else:
             stderr = process.stderr.read().decode() if process.stderr else ""
-            print(f"Error on {mov_name}: {stderr}")
+            print(f"Error on {moving_name}: {stderr}")
     except subprocess.CalledProcessError as e:
-        print(f"Error on {mov_name}: {e}")
+        print(f"Error on {moving_name}: {e}")
     except FileNotFoundError:
         print("Error: ANTs command not found.")
     
@@ -89,12 +89,12 @@ def new_xfm(n_output_folder, n_fixed_image, n_moving_image, on_complete=None, ca
         on_complete()
   
 
-def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, on_complete=None, cancel_checker=None):
+def apply_existing_xfm(output_folder, transform_files, moving_image, reference_image, on_complete=None, cancel_checker=None):
 
-    if isinstance(xfm_files, str):
-        xfm_list = [xfm_files]
+    if isinstance(transform_files, str):
+        transform_list = [transform_files]
     else: 
-        xfm_list = [f. strip() for f in xfm_files if f.strip()]
+        transform_list = [f.strip() for f in transform_files if f.strip()]
 
     if isinstance(moving_image, list):
         for single_image in moving_image:
@@ -103,7 +103,7 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
                 print("Transform application cancelled by user")
                 return
             
-            apply_existing_xfm(output_folder, xfm_list, single_image, reference_image, on_complete=None, cancel_checker=cancel_checker)
+            apply_existing_xfm(output_folder, transform_list, single_image, reference_image, on_complete=None, cancel_checker=cancel_checker)
         if on_complete: 
             on_complete()
         return
@@ -112,19 +112,19 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
         base = os.path.basename(path)
         if base.endswith(".nii.gz"):
             return base[:-7]
-        elif base.endswith(". nii"):
+        elif base.endswith(".nii"):
             return base[:-4]
         return os.path.splitext(base)[0]
     
-    mov_name = clean_name(moving_image)
+    moving_name = clean_name(moving_image)
     
-    if len(xfm_list) == 1:
-        xfm_name = clean_name(xfm_list[0])
+    if len(transform_list) == 1:
+        transform_name = clean_name(transform_list[0])
     else:
-        xfm_name = f"{len(xfm_list)}transforms"
+        transform_name = f"{len(transform_list)}transforms"
     
-    new_name = f"{mov_name}_applied_{xfm_name}.nii.gz"
-    full_output_path = os.path.join(output_folder, new_name)
+    output_filename = f"{moving_name}_applied_{transform_name}.nii.gz"
+    full_output_path = os.path.join(output_folder, output_filename)
 
     cmd = [
         "antsApplyTransforms",
@@ -135,8 +135,8 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
         "-n", "Linear"
     ]
     
-    for xfm in reversed(xfm_list):
-        cmd.extend(["-t", xfm])
+    for transform in reversed(transform_list):
+        cmd.extend(["-t", transform])
     
     # Check for cancellation before starting
     if cancel_checker and cancel_checker():
@@ -149,14 +149,14 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
         # Poll the process and check for cancellation
         while process.poll() is None:
             if cancel_checker and cancel_checker():
-                print(f"Cancelling transform application for {mov_name}")
+                print(f"Cancelling transform application for {moving_name}")
                 process.terminate()
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
-                print(f"Transform application cancelled: {mov_name}")
+                print(f"Transform application cancelled: {moving_name}")
                 return
         
         # Check if process completed successfully

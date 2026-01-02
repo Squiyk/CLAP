@@ -1369,10 +1369,10 @@ class CLAP(ctk.CTk):
     def start_z_scored_connectome_thread(self):
         subject_connectome = self.entry_sub_connectome.get().strip()
         raw_ref_connectomes = self.entry_ref_connectomes.get("0.0", "end")
-        ref_connectomes_list = [line.strip() for line in raw_ref_connectomes.split("\n") if line.strip()]
+        reference_connectomes = [line.strip() for line in raw_ref_connectomes.split("\n") if line.strip()]
         output_dir = self.entry_output_zscore_cnctm.get().strip()
 
-        if not subject_connectome or not ref_connectomes_list or not output_dir:
+        if not subject_connectome or not reference_connectomes or not output_dir:
             messagebox.showerror("Input Error", "Please provide Subject Connectome, Reference Connectomes, and Output Directory.")
             return
         
@@ -1380,15 +1380,15 @@ class CLAP(ctk.CTk):
         self.current_task_id = self.task_logger.start_task(
             "Z-Score Connectome",
             "Connectome",
-            f"{len(ref_connectomes_list)} reference(s)",
-            input_files=[subject_connectome] + ref_connectomes_list,
+            f"{len(reference_connectomes)} reference(s)",
+            input_files=[subject_connectome] + reference_connectomes,
             output_location=output_dir
         )
         
         self._show_task_status("Z-Score Connectome")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag), daemon=True)
+        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, reference_connectomes, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
@@ -1406,12 +1406,12 @@ class CLAP(ctk.CTk):
 
 # Display connectome thread starter
     def start_display_connectome_thread(self):
-        raw_cnctms = self.entry_disp_cnctm.get("0.0", "end")
-        cnctms_list = [line.strip() for line in raw_cnctms.split("\n") if line.strip()]
+        raw_connectomes = self.entry_disp_cnctm.get("0.0", "end")
+        connectomes_list = [line.strip() for line in raw_connectomes.split("\n") if line.strip()]
         raw_luts = self.entry_disp_lut.get("0.0", "end")
         luts_list = [line.strip() for line in raw_luts.split("\n") if line.strip()]
 
-        if not cnctms_list or not luts_list:
+        if not connectomes_list or not luts_list:
             messagebox.showerror("Input Error", "Please provide at least one Connectome and one LUT file.")
             return
         
@@ -1419,8 +1419,8 @@ class CLAP(ctk.CTk):
         self.current_task_id = self.task_logger.start_task(
             "Display Connectomes",
             "Connectome",
-            f"{len(cnctms_list)} connectome(s)",
-            input_files=cnctms_list + luts_list,
+            f"{len(connectomes_list)} connectome(s)",
+            input_files=connectomes_list + luts_list,
             output_location="Display only"
         )
         
@@ -1433,10 +1433,10 @@ class CLAP(ctk.CTk):
             lut_map[base] = lut
 
         paired_data = []
-        for cnctm in cnctms_list:
-            name = Path(cnctm).stem.replace("_connectome", "")
+        for connectome in connectomes_list:
+            name = Path(connectome).stem.replace("_connectome", "")
             if name in lut_map:
-                paired_data.append((cnctm, lut_map[name]))
+                paired_data.append((connectome, lut_map[name]))
             else:
                 messagebox.showwarning("Warning", f"No matching LUT found for connectome: {name}")
         
@@ -1465,16 +1465,16 @@ class CLAP(ctk.CTk):
         ref_mask_img = self.entry_ref_mask_img.get().strip()
         seeg_coords_file = self.entry_seeg_coords.get().strip()
         output_dir = self.entry_output_roi_mask_dir.get().strip()
-        raw_rad = self.sel_compute_radius.get()
-        raw_mode = self.sel_compute_mode_segbtn.get()
+        radius_input = self.sel_compute_radius.get()
+        mode_input = self.sel_compute_mode_segbtn.get()
 
         try:
-            sel_rad = float(raw_rad)
+            sphere_radius = float(radius_input)
         except ValueError:
-            messagebox.showerror("Input Error","Radius mus be a valid number")
+            messagebox.showerror("Input Error","Radius must be a valid number")
             return    
         
-        is_bipolar_mode = (raw_mode == "Bipolar") 
+        is_bipolar_mode = (mode_input == "Bipolar") 
 
         if not ref_mask_img or not seeg_coords_file or not output_dir:
             messagebox.showerror("Input Error", "Please provide Reference Mask Image, SEEG Coordinates File, and Output Directory.")
@@ -1484,7 +1484,7 @@ class CLAP(ctk.CTk):
         self.current_task_id = self.task_logger.start_task(
             "Generate SEEG ROI Masks",
             "ROI Toolbox",
-            f"Mode: {raw_mode}, Radius: {sel_rad}mm",
+            f"Mode: {mode_input}, Radius: {sphere_radius}mm",
             input_files=[ref_mask_img, seeg_coords_file],
             output_location=output_dir
         )
@@ -1492,7 +1492,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("Generate SEEG ROI Masks")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag), daemon=True)
+        task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sphere_radius, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
