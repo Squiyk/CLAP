@@ -68,14 +68,14 @@ class CLAP(ctk.CTk):
         sidebar_button_card.grid_rowconfigure(0, weight=1)
 
         # Sidebar buttons
+        self.sidebar_btn_home = ctk.CTkButton(sidebar_button_card, text="Home", fg_color="#0078D7", command=self.setup_home_page)
+        self.sidebar_btn_home.grid(row=1, column=0, padx=5, pady=10)
+        
         self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
-        self.sidebar_btn_1.grid(row=1, column=0, padx=5, pady=20)
+        self.sidebar_btn_1.grid(row=2, column=0, padx=5, pady=10)
 
         # Tools drawer
         self.tools_drawer = ctk.CTkFrame(sidebar_button_card, fg_color="transparent")
-
-        self.bt_btn_1 = ctk.CTkButton(self.tools_drawer, text="Home", command=self.setup_home_page)
-        self.bt_btn_1.pack(fill="x", padx=10, pady=5)
 
         self.bt_btn_2 = ctk.CTkButton(self.tools_drawer, text="Registration tools", command=self.setup_registration_tools_page)
         self.bt_btn_2.pack(fill="x", padx=10, pady=5)
@@ -88,10 +88,10 @@ class CLAP(ctk.CTk):
         
         # Additional buttons (Settings and History)
         self.sidebar_btn_2 = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color="#0078D7", command=self.setup_settings_page)
-        self.sidebar_btn_2.grid(row=2, column=0, padx=5, pady=10)
+        self.sidebar_btn_2.grid(row=3, column=0, padx=5, pady=10)
         
         self.sidebar_btn_3 = ctk.CTkButton(sidebar_button_card, text="History", fg_color="#0078D7", command=self.setup_history_page)
-        self.sidebar_btn_3.grid(row=3, column=0, padx=5, pady=10)
+        self.sidebar_btn_3.grid(row=4, column=0, padx=5, pady=10)
         
         # Task status frame (appears when task is running)
         self.task_status_frame = ctk.CTkFrame(
