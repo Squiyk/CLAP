@@ -256,15 +256,16 @@ class SettingsManager:
                             # Check if this part is a pure version number (only digits and dots)
                             if re.match(r'^\d+\.\d+(?:\.\d+)?$', part.strip()):
                                 version_parts = part.split('.')
-                                # Return major.minor only
+                                # Return major.minor only (guaranteed to have at least 2 parts by regex)
                                 return version_parts[0] + '.' + version_parts[1]
             except Exception:
                 pass
         
         # Try alternate approach: check directory name
-        # Look for version pattern with reasonable major version (6-9 for FreeSurfer)
+        # Use class constants for version range
         dir_name = os.path.basename(freesurfer_home.rstrip('/'))
-        match = re.search(r'\b([6-9]\.\d+)(?:\.\d+)?\b', dir_name)
+        pattern = rf'\b([{self.FREESURFER_MIN_VERSION}-{self.FREESURFER_MAX_VERSION}]\.\d+)(?:\.\d+)?\b'
+        match = re.search(pattern, dir_name)
         if match:
             return match.group(1)
         
