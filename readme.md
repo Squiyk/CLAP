@@ -9,8 +9,6 @@ CLAP is designed as a tool to simplify usage of common tools used in brain resea
 - **Persistent Menus**: Application remembers your last page and menu state
 - **Task Control**: Cancel running tasks and view progress indicators
 
-For detailed information about new features, see [FEATURES.md](FEATURES.md)
-
 ## Getting Started
 
 To get started with CLAP, download the code as a zip folder and run the configuration script. 
