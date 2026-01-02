@@ -7,7 +7,7 @@ CLAP is designed as a tool to simplify usage of common tools used in brain resea
 - **Registration Tools**: ANTs-based image registration and transform application
 - **Connectome Toolbox**: Generate and analyze structural connectomes from tractography
 - **ROI Parcelation Toolbox**: Generate ROI masks from SEEG coordinates
-- **Segmentation Toolbox**: FreeSurfer and FastSurfer integration for cortical reconstruction with multi-core and GPU support
+- **Segmentation Toolbox**: FreeSurfer and FastSurfer integration
 
 ## Toolboxes
 
