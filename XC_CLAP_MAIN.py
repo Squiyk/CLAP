@@ -1174,6 +1174,16 @@ class CLAP(ctk.CTk):
                 self.dep_path_entries[dep_name] = path_entry
                 
                 row_idx += 1
+            else:
+                # For available dependencies, store the current custom path (if any) without showing UI
+                # This preserves the path information even when dependency is found
+                current_path = dep_info.get("custom_path", "")
+                if current_path:
+                    # Create a hidden entry to preserve the path
+                    hidden_entry = ctk.CTkEntry(deps_frame)
+                    hidden_entry.insert(0, current_path)
+                    self.dep_path_entries[dep_name] = hidden_entry
+                    # Don't grid it (keep it hidden)
         
         # Add timestamp of check
         check_time_label = ctk.CTkLabel(
@@ -1377,6 +1387,7 @@ class CLAP(ctk.CTk):
         if selected_label == "Custom Path...":
             self.custom_fs_label.grid(row=3, column=0, padx=(20, 10), pady=10, sticky="w")
             if current_fs_for_fastsurfer:
+                self.custom_fs_entry.delete(0, ctk.END)  # Clear existing content first
                 self.custom_fs_entry.insert(0, current_fs_for_fastsurfer)
             self.custom_fs_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
             self.custom_fs_browse_btn.grid(row=3, column=2, padx=(0, 20), pady=10)
