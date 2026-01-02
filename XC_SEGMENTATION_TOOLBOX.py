@@ -7,11 +7,6 @@ def extract_subject_id_from_filename(filepath):
     """
     Extract subject ID from filename by taking the first part before underscore or hyphen.
     
-    Examples:
-        sub-01_trial_ses-01_T1w.nii -> sub-01
-        subject001_T1.nii.gz -> subject001
-        patient-123_session1_T1w.nii -> patient-123
-    
     Args:
         filepath: Path to the file
     

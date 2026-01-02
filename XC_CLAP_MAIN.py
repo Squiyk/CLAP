@@ -758,26 +758,25 @@ class CLAP(ctk.CTk):
         )
         lbl_mm.pack(side="left", padx=(5,0))
 
-
-        self.sel_compute_mode_segbtn = ctk.CTkSegmentedButton(
-            radius_mode_frame,
-            values=["Monopolar", "Bipolar"],
-            fg_color=("gray70", "gray30"),
-            unselected_color=("gray70", "gray30"),
-            selected_hover_color="#005A9E",
-            selected_color="#0078D7"
-        )
-        self.sel_compute_mode_segbtn.pack(side="right")
-        self.sel_compute_mode_segbtn.set("Monopolar")
-
         lbl_mode = ctk.CTkLabel(
             radius_mode_frame,
             text="Computation Mode:",
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             text_color=("gray30", "gray80")
         )
-        lbl_mode.pack(side="right", padx=(0,10))
+        lbl_mode.pack(side="left", padx=(20,0))
 
+        self.sel_compute_mode_segbtn = ctk.CTkSegmentedButton(
+            radius_mode_frame,
+            values=["Monopolar", "Bipolar"],
+            fg_color=("gray85", "gray15"),
+            unselected_color=("gray85", "gray15"),
+            selected_color="#0078D7",
+            font=ctk.CTkFont(family="Proxima Nova", size=13),
+            corner_radius=8,
+        )
+        self.sel_compute_mode_segbtn.pack(side="left", padx=(10,0))
+        self.sel_compute_mode_segbtn.set("Monopolar")
 
         # Run SEEG ROI Mask Generation button
         run_seeg_roi_mask_tool_btn = ctk.CTkButton(
