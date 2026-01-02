@@ -320,7 +320,13 @@ class CLAP(ctk.CTk):
                 self.form_values['roi_mode'] = self.sel_compute_mode_segbtn.get()
             except Exception:
                 pass
-
+        
+        # Special handling for FastSurfer GPU toggle (CheckBox)
+        if page_name == "segmentation" and hasattr(self, 'fastsurfer_gpu_toggle'):
+            try:
+                self.form_values['seg_fastsurfer_gpu'] = self.fastsurfer_gpu_toggle.get()
+            except Exception:
+                pass
 
 
 #### Page Setups ####
@@ -988,6 +994,19 @@ class CLAP(ctk.CTk):
         self.entry_fastsurfer_output, fastsurfer_output_btn = self.createrow(fastsurfer_frame, 3, "Output Directory (SUBJECTS_DIR):")
         fastsurfer_output_btn.configure(command=lambda: self.browse_folder(self.entry_fastsurfer_output))
 
+        # GPU toggle
+        gpu_toggle_frame = ctk.CTkFrame(fastsurfer_frame, fg_color="transparent")
+        gpu_toggle_frame.grid(row=4, column=0, columnspan=3, padx=20, pady=(10,0), sticky="w")
+        
+        self.fastsurfer_gpu_toggle = ctk.CTkCheckBox(
+            gpu_toggle_frame,
+            text="Use GPU acceleration (if available)",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        self.fastsurfer_gpu_toggle.select()  # Default to enabled
+        self.fastsurfer_gpu_toggle.pack(side="left")
+
         # Run FastSurfer button
         run_fastsurfer_btn = ctk.CTkButton(
             fastsurfer_frame,
@@ -997,7 +1016,7 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=15, weight="bold"),
             command=lambda: self.start_fastsurfer_thread()
         )
-        run_fastsurfer_btn.grid(row=4, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
+        run_fastsurfer_btn.grid(row=5, column=0, columnspan=3, pady=(20,30), padx=20, sticky="ew")
 
         # Restore saved form values
         self._restore_form_value('seg_freeview_images', self.entry_freeview_images)
@@ -1007,6 +1026,16 @@ class CLAP(ctk.CTk):
         self._restore_form_value('seg_fastsurfer_input', self.entry_fastsurfer_input)
         self._restore_form_value('seg_fastsurfer_subject_id', self.entry_fastsurfer_subject_id)
         self._restore_form_value('seg_fastsurfer_output', self.entry_fastsurfer_output)
+        
+        # Restore GPU toggle state
+        if 'seg_fastsurfer_gpu' in self.form_values:
+            try:
+                if self.form_values['seg_fastsurfer_gpu'] == 1:
+                    self.fastsurfer_gpu_toggle.select()
+                else:
+                    self.fastsurfer_gpu_toggle.deselect()
+            except Exception:
+                pass
 
 
     def setup_settings_page(self):
@@ -1896,7 +1925,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("FreeSurfer recon-all")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_recon_all, args=(input_image, subject_id, output_dir, license_file, self.on_recon_all_complete, lambda: self.cancel_task_flag), daemon=True)
+        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_recon_all, args=(input_image, subject_id, output_dir, license_file, None, self.on_recon_all_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
@@ -1922,6 +1951,9 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "Please provide all required inputs: T1 image, Subject ID, and Output Directory.")
             return
         
+        # Get GPU toggle state
+        use_gpu = self.fastsurfer_gpu_toggle.get() == 1
+        
         # Get paths from settings
         license_file = self.settings_manager.get("external_dependencies.freesurfer_license", "")
         fastsurfer_home = self.settings_manager.get("external_dependencies.fastsurfer_home", "")
@@ -1938,7 +1970,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("FastSurfer")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer, args=(input_image, subject_id, output_dir, fastsurfer_home, license_file, self.on_fastsurfer_complete, lambda: self.cancel_task_flag), daemon=True)
+        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer, args=(input_image, subject_id, output_dir, fastsurfer_home, license_file, use_gpu, None, self.on_fastsurfer_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 

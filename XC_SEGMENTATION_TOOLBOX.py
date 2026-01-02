@@ -86,7 +86,7 @@ def launch_freeview(input_images, working_dir=None, on_complete=None, cancel_che
         on_complete()
 
 
-def run_recon_all(input_image, subject_id, output_dir, license_file=None, on_complete=None, cancel_checker=None):
+def run_recon_all(input_image, subject_id, output_dir, license_file=None, num_threads=None, on_complete=None, cancel_checker=None):
     """
     Run FreeSurfer's recon-all pipeline
     
@@ -95,6 +95,7 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, on_com
         subject_id: Subject identifier
         output_dir: Output (subjects) directory
         license_file: Path to FreeSurfer license file
+        num_threads: Number of threads to use (None for auto-detect safe maximum)
         on_complete: Callback function to call when complete
         cancel_checker: Function that returns True if task should be cancelled
     """
@@ -123,17 +124,30 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, on_com
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
-    # Build recon-all command
+    # Calculate number of threads if not provided
+    if num_threads is None:
+        try:
+            total_cores = os.cpu_count()
+            if total_cores is None:
+                total_cores = 4
+        except NotImplementedError:
+            total_cores = 4
+        # Reserve 2 cores for system, use at least 1
+        num_threads = max(1, total_cores - 2)
+    
+    # Build recon-all command with OpenMP threading
     cmd = [
         "recon-all",
         "-i", input_image,
         "-s", subject_id,
-        "-all"
+        "-all",
+        "-openmp", str(num_threads)
     ]
     
     print(f"Running recon-all for subject: {subject_id}")
     print(f"Input: {input_image}")
     print(f"Output directory: {output_dir}")
+    print(f"Using {num_threads} threads")
     print("This may take several hours...")
     
     try:
@@ -184,7 +198,7 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, on_com
         on_complete()
 
 
-def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, license_file=None, on_complete=None, cancel_checker=None):
+def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, license_file=None, use_gpu=True, num_threads=None, on_complete=None, cancel_checker=None):
     """
     Run FastSurfer pipeline (FreeSurfer alternative using deep learning)
     
@@ -194,6 +208,8 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
         output_dir: Output (subjects) directory
         fastsurfer_home: Path to FastSurfer installation
         license_file: Path to FreeSurfer license file
+        use_gpu: Whether to use GPU acceleration (default: True)
+        num_threads: Number of threads to use for surface reconstruction (None for auto-detect)
         on_complete: Callback function to call when complete
         cancel_checker: Function that returns True if task should be cancelled
     """
@@ -222,6 +238,17 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
+    # Calculate number of threads if not provided
+    if num_threads is None:
+        try:
+            total_cores = os.cpu_count()
+            if total_cores is None:
+                total_cores = 4
+        except NotImplementedError:
+            total_cores = 4
+        # Reserve 2 cores for system, use at least 1
+        num_threads = max(1, total_cores - 2)
+    
     # Determine FastSurfer command
     if fastsurfer_home and os.path.exists(fastsurfer_home):
         run_fastsurfer_script = os.path.join(fastsurfer_home, "run_fastsurfer.sh")
@@ -239,13 +266,50 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
     cmd.extend([
         "--t1", input_image,
         "--sid", subject_id,
-        "--sd", output_dir
+        "--sd", output_dir,
+        "--threads", str(num_threads)
     ])
+    
+    # Detect if running on Apple Silicon
+    is_apple_silicon = False
+    try:
+        import platform
+        if platform.system() == 'Darwin':  # macOS
+            # Check if running on ARM architecture (Apple Silicon)
+            machine = platform.machine()
+            if machine == 'arm64':
+                is_apple_silicon = True
+    except Exception:
+        pass
+    
+    # Add GPU/CPU flag
+    if use_gpu:
+        if is_apple_silicon:
+            # Apple Silicon with MPS support
+            cmd.append("--device")
+            cmd.append("mps")
+            env['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+            print("Using Apple Silicon GPU (MPS) with fallback enabled")
+        else:
+            # Standard GPU mode (CUDA)
+            print("Using GPU acceleration (CUDA if available)")
+    else:
+        # CPU-only mode
+        cmd.append("--device")
+        cmd.append("cpu")
+        print("Using CPU-only mode")
     
     print(f"Running FastSurfer for subject: {subject_id}")
     print(f"Input: {input_image}")
     print(f"Output directory: {output_dir}")
-    print("This may take 30-60 minutes...")
+    print(f"Using {num_threads} threads for surface reconstruction")
+    if use_gpu:
+        if is_apple_silicon:
+            print("This may take 30-90 minutes with Apple Silicon GPU...")
+        else:
+            print("This may take 30-60 minutes with GPU...")
+    else:
+        print("This may take 1-3 hours with CPU...")
     
     try:
         # Run FastSurfer
