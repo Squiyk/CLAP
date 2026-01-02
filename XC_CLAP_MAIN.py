@@ -68,16 +68,13 @@ class CLAP(ctk.CTk):
             )
         sidebar_button_card.grid(row=1, column=0, sticky="nswe", padx=(20,0), pady=(0,20))
         sidebar_button_card.grid_columnconfigure(0, weight=1)
-        sidebar_button_card.grid_rowconfigure(0, weight=1)
+        sidebar_button_card.grid_rowconfigure(1, weight=1)  # Spacer row
 
-        # Sidebar buttons
+        # Home button at the top
         self.sidebar_btn_home = ctk.CTkButton(sidebar_button_card, text="Home", fg_color="#0078D7", command=self.setup_home_page)
-        self.sidebar_btn_home.grid(row=1, column=0, padx=5, pady=10)
+        self.sidebar_btn_home.grid(row=0, column=0, padx=5, pady=10)
         
-        self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
-        self.sidebar_btn_1.grid(row=2, column=0, padx=5, pady=10)
-
-        # Tools drawer
+        # Tools drawer (will appear above bottom buttons when opened)
         self.tools_drawer = ctk.CTkFrame(sidebar_button_card, fg_color="transparent")
 
         self.bt_btn_2 = ctk.CTkButton(self.tools_drawer, text="Registration tools", command=self.setup_registration_tools_page)
@@ -89,7 +86,10 @@ class CLAP(ctk.CTk):
         self.bt_btn_4 = ctk.CTkButton(self.tools_drawer, text="ROI Parcelation Toolbox", command=self.setup_ROI_toolbox_page)
         self.bt_btn_4.pack(fill="x", padx=10, pady=5)
         
-        # Additional buttons (Settings and History)
+        # Bottom buttons (Tools, Settings, History)
+        self.sidebar_btn_1 = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
+        self.sidebar_btn_1.grid(row=2, column=0, padx=5, pady=10)
+        
         self.sidebar_btn_2 = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color="#0078D7", command=self.setup_settings_page)
         self.sidebar_btn_2.grid(row=3, column=0, padx=5, pady=10)
         
@@ -141,7 +141,7 @@ class CLAP(ctk.CTk):
             self.sidebar_btn_1.configure(text="Tools", fg_color="#0078D7")
             self.settings_manager.set("tools_menu_expanded", False)
         else:
-            self.tools_drawer.grid(row=0, column=0, sticky="sew")
+            self.tools_drawer.grid(row=1, column=0, sticky="sew", pady=(0, 10))
             self.sidebar_btn_1.configure(text="Tools", fg_color="#004E81")
             self.settings_manager.set("tools_menu_expanded", True)
     
@@ -149,7 +149,7 @@ class CLAP(ctk.CTk):
         """Restore UI state from settings"""
         # Restore menu expansion state
         if self.settings_manager.get("tools_menu_expanded", False):
-            self.tools_drawer.grid(row=0, column=0, sticky="sew")
+            self.tools_drawer.grid(row=1, column=0, sticky="sew", pady=(0, 10))
             self.sidebar_btn_1.configure(text="Tools", fg_color="#004E81")
         
         # Restore last page
