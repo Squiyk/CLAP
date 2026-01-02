@@ -198,7 +198,7 @@ def run_recon_all(input_image, subject_id, output_dir, license_file=None, num_th
         on_complete()
 
 
-def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, license_file=None, use_gpu=True, num_threads=None, on_complete=None, cancel_checker=None):
+def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, license_file=None, use_gpu=True, num_threads=None, freesurfer_home=None, on_complete=None, cancel_checker=None):
     """
     Run FastSurfer pipeline (FreeSurfer alternative using deep learning)
     
@@ -210,6 +210,7 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
         license_file: Path to FreeSurfer license file
         use_gpu: Whether to use GPU acceleration (default: True)
         num_threads: Number of threads to use for surface reconstruction (None for auto-detect)
+        freesurfer_home: Path to specific FreeSurfer installation to use (optional, uses environment default if not specified)
         on_complete: Callback function to call when complete
         cancel_checker: Function that returns True if task should be cancelled
     """
@@ -254,6 +255,19 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
         else:
             env['PYTHONPATH'] = fastsurfer_home
         print(f"FastSurfer environment configured: {fastsurfer_home}")
+    
+    # Set up FreeSurfer environment if a specific version is provided for FastSurfer
+    if freesurfer_home and os.path.exists(freesurfer_home):
+        env['FREESURFER_HOME'] = freesurfer_home
+        # Add FreeSurfer bin directory to PATH
+        freesurfer_bin = os.path.join(freesurfer_home, 'bin')
+        if os.path.exists(freesurfer_bin):
+            path = env.get('PATH', '')
+            if path:
+                env['PATH'] = freesurfer_bin + os.pathsep + path
+            else:
+                env['PATH'] = freesurfer_bin
+        print(f"Using FreeSurfer installation for surface reconstruction: {freesurfer_home}")
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)

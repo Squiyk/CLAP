@@ -19,7 +19,8 @@ class SettingsManager:
                 "mrtrix_path": "",
                 "freesurfer_home": "",
                 "freesurfer_license": "",
-                "fastsurfer_home": ""
+                "fastsurfer_home": "",
+                "freesurfer_for_fastsurfer": ""  # FreeSurfer version to use specifically for FastSurfer
             }
         }
         self._ensure_user_data_dir()
@@ -121,3 +122,99 @@ class SettingsManager:
         }
         
         return status
+    
+    def detect_freesurfer_installations(self):
+        """
+        Detect available FreeSurfer installations on the system.
+        Returns a list of tuples: (label, path) where label is a display name and path is FREESURFER_HOME.
+        The first entry is always the auto-detected version from the environment.
+        """
+        installations = []
+        
+        # Check for FreeSurfer in environment
+        env_freesurfer = os.environ.get('FREESURFER_HOME', '')
+        if env_freesurfer and os.path.exists(env_freesurfer):
+            # Try to get version
+            version = self._get_freesurfer_version(env_freesurfer)
+            if version:
+                installations.append((f"Auto-detected ({version})", env_freesurfer))
+            else:
+                installations.append(("Auto-detected", env_freesurfer))
+        else:
+            # No FreeSurfer in environment
+            installations.append(("Auto-detected (None)", ""))
+        
+        # Check common installation paths
+        common_paths = [
+            "/usr/local/freesurfer",
+            "/Applications/freesurfer",
+            os.path.expanduser("~/freesurfer"),
+            "/opt/freesurfer"
+        ]
+        
+        # Also check versioned paths
+        for major_version in range(6, 9):  # FreeSurfer 6.x, 7.x, 8.x
+            for minor_version in range(0, 10):
+                common_paths.append(f"/usr/local/freesurfer/{major_version}.{minor_version}")
+                common_paths.append(f"/Applications/freesurfer/{major_version}.{minor_version}")
+                common_paths.append(os.path.expanduser(f"~/freesurfer/{major_version}.{minor_version}"))
+                common_paths.append(f"/opt/freesurfer-{major_version}.{minor_version}")
+        
+        # Check each path
+        seen_paths = {env_freesurfer} if env_freesurfer else set()
+        for path in common_paths:
+            if path and os.path.exists(path) and path not in seen_paths:
+                # Verify it's actually FreeSurfer by checking for key files
+                if self._is_valid_freesurfer_installation(path):
+                    version = self._get_freesurfer_version(path)
+                    if version:
+                        installations.append((f"FreeSurfer {version} ({path})", path))
+                    else:
+                        installations.append((f"FreeSurfer ({path})", path))
+                    seen_paths.add(path)
+        
+        return installations
+    
+    def _is_valid_freesurfer_installation(self, path):
+        """Check if a path contains a valid FreeSurfer installation"""
+        # Check for key FreeSurfer files/directories
+        key_paths = [
+            os.path.join(path, "bin", "recon-all"),
+            os.path.join(path, "bin", "mri_convert"),
+            os.path.join(path, "SetUpFreeSurfer.sh")
+        ]
+        return any(os.path.exists(p) for p in key_paths)
+    
+    def _get_freesurfer_version(self, freesurfer_home):
+        """
+        Try to detect FreeSurfer version from the installation.
+        Returns version string or None if not found.
+        """
+        # Try to read version from build-stamp.txt
+        build_stamp = os.path.join(freesurfer_home, "build-stamp.txt")
+        if os.path.exists(build_stamp):
+            try:
+                with open(build_stamp, 'r') as f:
+                    content = f.read().strip()
+                    # Extract version number (typically in format like "freesurfer-linux-centos7_x86_64-7.3.2-20220804-6354275")
+                    if '-' in content:
+                        parts = content.split('-')
+                        for part in parts:
+                            # Look for version-like patterns (X.X.X)
+                            if '.' in part and any(c.isdigit() for c in part):
+                                version_parts = part.split('.')
+                                if len(version_parts) >= 2 and version_parts[0].isdigit():
+                                    return part.split('.')[0] + '.' + part.split('.')[1]
+            except Exception:
+                pass
+        
+        # Try alternate approach: check directory name
+        dir_name = os.path.basename(freesurfer_home.rstrip('/'))
+        if any(c.isdigit() for c in dir_name):
+            # Extract version from directory name like "freesurfer-7.3.2" or "7.3"
+            import re
+            match = re.search(r'(\d+\.\d+)', dir_name)
+            if match:
+                return match.group(1)
+        
+        return None

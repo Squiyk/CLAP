@@ -1239,6 +1239,42 @@ class CLAP(ctk.CTk):
         )
         license_browse_btn.grid(row=1, column=2, padx=(0, 20), pady=10)
         
+        # FreeSurfer Version for FastSurfer
+        fs_version_label = ctk.CTkLabel(
+            freesurfer_config_frame,
+            text="FreeSurfer for FastSurfer:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        )
+        fs_version_label.grid(row=2, column=0, padx=(20, 10), pady=10, sticky="w")
+        
+        # Detect available FreeSurfer installations
+        self.freesurfer_installations = self.settings_manager.detect_freesurfer_installations()
+        fs_labels = [label for label, path in self.freesurfer_installations]
+        
+        self.freesurfer_version_menu = ctk.CTkOptionMenu(
+            freesurfer_config_frame,
+            values=fs_labels,
+            height=35,
+            fg_color=("white", "#343638"),
+            button_color=("#0078D7", "#0078D7"),
+            button_hover_color=("#005A9E", "#005A9E"),
+            dropdown_fg_color=("white", "#2B2B2B"),
+            text_color=("black", "white"),
+            font=ctk.CTkFont(family="Proxima Nova", size=14)
+        )
+        
+        # Set current value
+        current_fs_for_fastsurfer = self.settings_manager.get("external_dependencies.freesurfer_for_fastsurfer", "")
+        # Find matching label for current setting
+        selected_label = fs_labels[0]  # Default to auto-detected
+        for label, path in self.freesurfer_installations:
+            if path == current_fs_for_fastsurfer:
+                selected_label = label
+                break
+        self.freesurfer_version_menu.set(selected_label)
+        self.freesurfer_version_menu.grid(row=2, column=1, columnspan=2, padx=(10, 20), pady=10, sticky="ew")
+        
         # Save FreeSurfer Settings Button
         save_fs_settings_btn = ctk.CTkButton(
             freesurfer_config_frame,
@@ -1248,7 +1284,7 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             command=self.save_freesurfer_settings
         )
-        save_fs_settings_btn.grid(row=2, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+        save_fs_settings_btn.grid(row=3, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
 
 
     def setup_history_page(self):
@@ -1957,6 +1993,7 @@ class CLAP(ctk.CTk):
         # Get paths from settings
         license_file = self.settings_manager.get("external_dependencies.freesurfer_license", "")
         fastsurfer_home = self.settings_manager.get("external_dependencies.fastsurfer_home", "")
+        freesurfer_for_fastsurfer = self.settings_manager.get("external_dependencies.freesurfer_for_fastsurfer", "")
         
         # Log task start
         self.current_task_id = self.task_logger.start_task(
@@ -1970,7 +2007,7 @@ class CLAP(ctk.CTk):
         self._show_task_status("FastSurfer")
         self.cancel_task_flag = False
 
-        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer, args=(input_image, subject_id, output_dir, fastsurfer_home, license_file, use_gpu, None, self.on_fastsurfer_complete, lambda: self.cancel_task_flag), daemon=True)
+        task = threading.Thread(target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer, args=(input_image, subject_id, output_dir, fastsurfer_home, license_file, use_gpu, None, freesurfer_for_fastsurfer, self.on_fastsurfer_complete, lambda: self.cancel_task_flag), daemon=True)
         self.current_task_thread = task
         task.start()
 
@@ -1997,6 +2034,17 @@ class CLAP(ctk.CTk):
         """Save FreeSurfer configuration settings"""
         license_path = self.freesurfer_license_entry.get().strip()
         self.settings_manager.set("external_dependencies.freesurfer_license", license_path)
+        
+        # Save FreeSurfer version selection for FastSurfer
+        selected_label = self.freesurfer_version_menu.get()
+        # Find the path corresponding to the selected label
+        selected_path = ""
+        for label, path in self.freesurfer_installations:
+            if label == selected_label:
+                selected_path = path
+                break
+        self.settings_manager.set("external_dependencies.freesurfer_for_fastsurfer", selected_path)
+        
         messagebox.showinfo("Success", "FreeSurfer settings saved successfully")
 
 # MAIN LOOP #        
