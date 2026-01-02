@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import re
 
 class SettingsManager:
     """Manages user settings and configuration for CLAP application"""
@@ -240,8 +241,6 @@ class SettingsManager:
         Try to detect FreeSurfer version from the installation.
         Returns version string (major.minor) or None if not found.
         """
-        import re
-        
         # Try to read version from build-stamp.txt
         build_stamp = os.path.join(freesurfer_home, "build-stamp.txt")
         if os.path.exists(build_stamp):
@@ -262,7 +261,7 @@ class SettingsManager:
                 pass
         
         # Try alternate approach: check directory name
-        # Use class constants for version range
+        # Validate against FREESURFER_MIN_VERSION and FREESURFER_MAX_VERSION
         dir_name = os.path.basename(freesurfer_home.rstrip('/'))
         # Match version pattern and validate range
         match = re.search(r'\b(\d+\.\d+)(?:\.\d+)?\b', dir_name)
