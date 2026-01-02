@@ -1396,7 +1396,7 @@ class CLAP(ctk.CTk):
             save_btn_row = 3
         
         # Save FreeSurfer Settings Button
-        save_fs_settings_btn = ctk.CTkButton(
+        self.save_fs_settings_btn = ctk.CTkButton(
             freesurfer_config_frame,
             text="Save FreeSurfer Settings",
             height=35,
@@ -1404,7 +1404,7 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             command=self.save_freesurfer_settings
         )
-        save_fs_settings_btn.grid(row=save_btn_row, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
+        self.save_fs_settings_btn.grid(row=save_btn_row, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
 
 
     def setup_history_page(self):
@@ -2172,11 +2172,15 @@ class CLAP(ctk.CTk):
             self.custom_fs_label.grid(row=3, column=0, padx=(20, 10), pady=10, sticky="w")
             self.custom_fs_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
             self.custom_fs_browse_btn.grid(row=3, column=2, padx=(0, 20), pady=10)
+            # Move save button to row 4
+            self.save_fs_settings_btn.grid(row=4, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
         else:
             # Hide custom path entry
             self.custom_fs_label.grid_forget()
             self.custom_fs_entry.grid_forget()
             self.custom_fs_browse_btn.grid_forget()
+            # Move save button back to row 3
+            self.save_fs_settings_btn.grid(row=3, column=0, columnspan=3, pady=(10, 20), padx=20, sticky="ew")
     
     def browse_custom_freesurfer(self):
         """Browse for custom FreeSurfer installation directory"""
