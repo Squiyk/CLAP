@@ -4,7 +4,7 @@
 
 # Setup Paths
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ENV_DIR="$DIR/complementary_files/clap_env"
+ENV_DIR="$DIR/user_data/clap_env"
 REQ_FILE="$DIR/complementary_files/requirements.txt"
 MAIN_SCRIPT="$DIR/XC_CLAP_MAIN.py"
 
