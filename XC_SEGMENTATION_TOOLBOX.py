@@ -335,6 +335,10 @@ def run_fastsurfer(input_image, subject_id, output_dir, fastsurfer_home=None, li
             # Apple Silicon with MPS support
             cmd.append("--device")
             cmd.append("mps")
+
+            cmd.append("--viewagg_device")
+            cmd.append("cpu")
+
             env['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
             print("Using Apple Silicon GPU (MPS) with fallback enabled")
         else:
