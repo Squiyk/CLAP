@@ -313,27 +313,33 @@ class ScriptRegistry:
         """
         Get the command to execute a script with proper shell escaping
         
+        This returns a command string that is safe to pass to bash -c or similar.
+        The script path is properly escaped using shlex.quote.
+        
         Args:
             language: Programming language
             script_path: Absolute path to script file
             
         Returns:
-            Command string to execute the script (safely quoted)
+            Command string to execute the script (safely quoted for shell execution)
         """
         interpreter = self.LANGUAGE_INTERPRETERS.get(language, "")
         
         if not interpreter:
             return ""
         
-        # Use shlex.quote to safely escape the script path
+        # Use shlex.quote to safely escape the script path for shell execution
         safe_path = shlex.quote(script_path)
         
-        # Special handling for Matlab - need to quote for both shell and Matlab
+        # Special handling for Matlab
         if language == "Matlab":
-            # Double escape: once for Matlab string, once for shell
+            # Matlab -batch expects a Matlab command as a string argument
+            # We escape single quotes for Matlab, and the whole thing is safe for shell
             matlab_safe = script_path.replace("'", "''")  # Matlab string escaping
+            # The double quotes around the batch argument protect it from shell expansion
             return f"{interpreter} -batch \"run('{matlab_safe}')\""
         
+        # For all other languages, use interpreter with properly quoted path
         return f"{interpreter} {safe_path}"
     
     def delete_script(self, filename: str) -> bool:

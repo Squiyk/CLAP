@@ -1734,10 +1734,8 @@ class CLAP(ctk.CTk):
             try:
                 if system == "Darwin":  # macOS
                     # Use AppleScript to open Terminal and run command
-                    # Use shlex.quote to safely escape the command
+                    # Use shlex.quote to safely escape the command for AppleScript
                     safe_command = shlex.quote(command)
-                    # For AppleScript, we need to escape quotes differently
-                    # The command is already shell-safe from shlex.quote
                     applescript = f'''
                     tell application "Terminal"
                         activate
@@ -1748,8 +1746,8 @@ class CLAP(ctk.CTk):
                     
                 elif system == "Linux":
                     # Try common Linux terminals with safe command passing
-                    # Use shlex.quote to prevent command injection
-                    safe_command = shlex.quote(command)
+                    # The command is passed to bash -c which handles it safely
+                    # We don't quote here because bash -c expects an unquoted command string
                     terminals = [
                         ["gnome-terminal", "--", "bash", "-c", f"{command}; exec bash"],
                         ["xterm", "-e", "bash", "-c", f"{command}; bash"],
