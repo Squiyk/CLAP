@@ -90,7 +90,7 @@ class CLAP(ctk.CTk):
         self.sidebar_btn_home.grid(row=0, column=0, padx=5, pady=10)
         
         # Tools drawer (will appear above bottom buttons when opened)
-        self.tools_drawer = ctk.CTkFrame(sidebar_button_card, fg_color="transparent")
+        self.tools_drawer = ctk.CTkFrame(sidebar_button_card, fg_color="transparent", corner_radius=10, border_width=1, border_color=("#E0E0E0", "#404040"))
 
         self.tools_btn_registration = ctk.CTkButton(self.tools_drawer, text="Registration tools", command=self.setup_registration_tools_page)
         self.tools_btn_registration.pack(fill="x", padx=10, pady=5)
