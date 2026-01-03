@@ -1213,26 +1213,70 @@ class CLAP(ctk.CTk):
             border_color=("#D0D0D0", "#404040")
         )
         card_frame.grid(row=idx, column=0, padx=10, pady=5, sticky="ew")
-        card_frame.grid_columnconfigure(1, weight=1)
+        card_frame.grid_columnconfigure(0, weight=1)
         
         # Make card clickable
         card_frame.bind("<Button-1>", lambda e: self.open_script_inspector(script))
         
-        # Script name (header)
+        # Row 0: Title (bigger and bold) + Language (small) on the same line
+        title_row_frame = ctk.CTkFrame(card_frame, fg_color="transparent")
+        title_row_frame.grid(row=0, column=0, padx=15, pady=(12, 5), sticky="ew")
+        title_row_frame.grid_columnconfigure(0, weight=1)
+        
         name_label = ctk.CTkLabel(
-            card_frame,
+            title_row_frame,
             text=script.get("name", "Unknown"),
-            font=ctk.CTkFont(family="Proxima Nova", size=16, weight="bold"),
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
             text_color=("gray10", "gray90"),
             anchor="w"
         )
-        name_label.grid(row=0, column=0, columnspan=3, padx=15, pady=(12, 5), sticky="w")
+        name_label.grid(row=0, column=0, sticky="w")
         name_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
         
-        # Description
+        language = script.get("language", "Unknown")
+        language_label = ctk.CTkLabel(
+            title_row_frame,
+            text=language,
+            font=ctk.CTkFont(family="Proxima Nova", size=10),
+            text_color=("gray40", "gray70"),
+            anchor="e"
+        )
+        language_label.grid(row=0, column=1, padx=(10, 0), sticky="e")
+        language_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+        title_row_frame.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+        
+        current_row = 1
+        
+        # Row 1: Project (bold) - if exists
+        if script.get("project"):
+            project_label = ctk.CTkLabel(
+                card_frame,
+                text=script['project'],
+                font=ctk.CTkFont(family="Proxima Nova", size=13, weight="bold"),
+                text_color=("gray20", "gray80"),
+                anchor="w"
+            )
+            project_label.grid(row=current_row, column=0, padx=15, pady=(0, 3), sticky="w")
+            project_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+            current_row += 1
+        
+        # Row 2: Author (normal) - if exists
+        if script.get("author"):
+            author_label = ctk.CTkLabel(
+                card_frame,
+                text=script['author'],
+                font=ctk.CTkFont(family="Proxima Nova", size=12),
+                text_color=("gray30", "gray75"),
+                anchor="w"
+            )
+            author_label.grid(row=current_row, column=0, padx=15, pady=(0, 5), sticky="w")
+            author_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+            current_row += 1
+        
+        # Row 3: Description with [...] truncation
         description = script.get("description", "No description")
-        if len(description) > 100:
-            description = description[:100] + "..."
+        if len(description) > 120:
+            description = description[:120] + " [...]"
         
         desc_label = ctk.CTkLabel(
             card_frame,
@@ -1240,65 +1284,23 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=12),
             text_color=("gray40", "gray70"),
             anchor="w",
-            wraplength=600
+            wraplength=600,
+            justify="left"
         )
-        desc_label.grid(row=1, column=0, columnspan=3, padx=15, pady=(0, 8), sticky="w")
+        desc_label.grid(row=current_row, column=0, padx=15, pady=(0, 8), sticky="w")
         desc_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+        current_row += 1
         
-        # Badges row
-        badges_frame = ctk.CTkFrame(card_frame, fg_color="transparent")
-        badges_frame.grid(row=2, column=0, padx=15, pady=(0, 12), sticky="w")
-        
-        # Project badge
-        if script.get("project"):
-            project_badge = ctk.CTkLabel(
-                badges_frame,
-                text=script['project'],
-                font=ctk.CTkFont(family="Proxima Nova", size=10),
-                text_color=("gray10", "gray90"),
-                fg_color=("#E3F2FD", "#1E3A5F"),
-                corner_radius=5,
-                padx=8,
-                pady=2
-            )
-            project_badge.pack(side="left", padx=(0, 5))
-        
-        # Language badge
-        language = script.get("language", "Unknown")
-        
-        language_badge = ctk.CTkLabel(
-            badges_frame,
-            text=language,
-            font=ctk.CTkFont(family="Proxima Nova", size=10),
-            text_color=("gray10", "gray90"),
-            fg_color=("#FFF9C4", "#4A4A1A"),
-            corner_radius=5,
-            padx=8,
-            pady=2
-        )
-        language_badge.pack(side="left", padx=(0, 5))
-        
-        # Author badge
-        if script.get("author"):
-            author_badge = ctk.CTkLabel(
-                badges_frame,
-                text=script['author'],
-                font=ctk.CTkFont(family="Proxima Nova", size=10),
-                text_color=("gray10", "gray90"),
-                fg_color=("#E8F5E9", "#1B3E1F"),
-                corner_radius=5,
-                padx=8,
-                pady=2
-            )
-            author_badge.pack(side="left", padx=(0, 5))
-        
-        # Tag badges
+        # Row 4: Tags (as tag badges)
         tags = script.get("tags", [])
         if tags:
+            tags_frame = ctk.CTkFrame(card_frame, fg_color="transparent")
+            tags_frame.grid(row=current_row, column=0, padx=15, pady=(0, 12), sticky="w")
+            
             for tag in tags:
                 colors = self.TAG_COLORS.get(tag, ("#E0E0E0", "#404040"))
                 tag_badge = ctk.CTkLabel(
-                    badges_frame,
+                    tags_frame,
                     text=tag.upper(),
                     font=ctk.CTkFont(family="Proxima Nova", size=9, weight="bold"),
                     text_color=("gray10", "gray90"),
@@ -1308,6 +1310,10 @@ class CLAP(ctk.CTk):
                     pady=2
                 )
                 tag_badge.pack(side="left", padx=(0, 5))
+        else:
+            # Add padding even if no tags to maintain consistent card height
+            spacer = ctk.CTkLabel(card_frame, text="", height=5)
+            spacer.grid(row=current_row, column=0, pady=(0, 7))
     
     def open_add_script_dialog(self):
         """Open dialog to add a new script"""
@@ -1625,7 +1631,7 @@ class CLAP(ctk.CTk):
         container = ctk.CTkFrame(inspector, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=20, pady=20)
         container.grid_columnconfigure(0, weight=1)
-        container.grid_rowconfigure(1, weight=1)
+        container.grid_rowconfigure(3, weight=1)
         
         # Header with script name
         header_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -1646,7 +1652,7 @@ class CLAP(ctk.CTk):
             fg_color=("gray95", "#1E1E1E"),
             corner_radius=5
         )
-        metadata_frame.grid(row=0, column=0, sticky="ew", pady=(40, 10))
+        metadata_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         metadata_frame.grid_columnconfigure(1, weight=1)
         
         # Display metadata
@@ -1718,7 +1724,7 @@ class CLAP(ctk.CTk):
                 border_width=1,
                 border_color=("#E0E0E0", "#404040")
             )
-            desc_frame.grid(row=1, column=0, sticky="ew", pady=10)
+            desc_frame.grid(row=2, column=0, sticky="ew", pady=10)
             
             ctk.CTkLabel(
                 desc_frame,
@@ -1744,7 +1750,7 @@ class CLAP(ctk.CTk):
             border_width=1,
             border_color=("#E0E0E0", "#404040")
         )
-        code_frame.grid(row=2, column=0, sticky="nsew", pady=10)
+        code_frame.grid(row=3, column=0, sticky="nsew", pady=10)
         code_frame.grid_columnconfigure(0, weight=1)
         code_frame.grid_rowconfigure(1, weight=1)
         
@@ -1779,7 +1785,7 @@ class CLAP(ctk.CTk):
         
         # Action buttons
         action_frame = ctk.CTkFrame(container, fg_color="transparent")
-        action_frame.grid(row=3, column=0, pady=(10, 0), sticky="ew")
+        action_frame.grid(row=4, column=0, pady=(10, 0), sticky="ew")
         action_frame.grid_columnconfigure(0, weight=1)
         action_frame.grid_columnconfigure(1, weight=1)
         action_frame.grid_columnconfigure(2, weight=1)
