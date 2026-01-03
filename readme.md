@@ -51,7 +51,7 @@ Within the application’s settings, you can view which external dependencies we
 
 ## External Dependencies
 
-CLAP relies on the following external tools (available on the system PATH unless otherwise specified):
+CLAP relies on the following external tools:
 
 - **ANTs** (Advanced Normalization Tools) — required for image registration
 - **MRtrix3** — required for tractography and connectome generation
