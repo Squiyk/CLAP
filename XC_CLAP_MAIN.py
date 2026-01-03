@@ -17,6 +17,7 @@ import pygame
 from clap_settings import SettingsManager
 from clap_task_logger import TaskLogger
 from script_registry import ScriptRegistry
+from utils.constants import PAGES_WITH_FORM_VALUES, DEFAULT_PAGE, SIDEBAR_BUTTON_FG_COLOR
 
 class CLAP(ctk.CTk):
     # Tag colors for UI display (light mode, dark mode)
@@ -86,7 +87,7 @@ class CLAP(ctk.CTk):
         sidebar_button_card.grid_rowconfigure(1, weight=1)  # Spacer row
 
         # Home button at the top
-        self.sidebar_btn_home = ctk.CTkButton(sidebar_button_card, text="Home", fg_color="#0078D7", command=self.setup_home_page)
+        self.sidebar_btn_home = ctk.CTkButton(sidebar_button_card, text="Home", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.setup_home_page)
         self.sidebar_btn_home.grid(row=0, column=0, padx=5, pady=10)
         
         # Tools drawer (will appear above bottom buttons when opened)
@@ -108,13 +109,13 @@ class CLAP(ctk.CTk):
         self.tools_btn_script_repo.pack(fill="x", padx=10, pady=5)
         
         # Bottom buttons (Tools, Settings, History)
-        self.sidebar_btn_tools = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
+        self.sidebar_btn_tools = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.toggle_tools_menu)
         self.sidebar_btn_tools.grid(row=2, column=0, padx=5, pady=10)
         
-        self.sidebar_btn_settings = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color="#0078D7", command=self.setup_settings_page)
+        self.sidebar_btn_settings = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.setup_settings_page)
         self.sidebar_btn_settings.grid(row=3, column=0, padx=5, pady=10)
         
-        self.sidebar_btn_history = ctk.CTkButton(sidebar_button_card, text="History", fg_color="#0078D7", command=self.setup_history_page)
+        self.sidebar_btn_history = ctk.CTkButton(sidebar_button_card, text="History", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.setup_history_page)
         self.sidebar_btn_history.grid(row=4, column=0, padx=5, pady=10)
         
         # Task status frame (appears when task is running)
@@ -159,7 +160,7 @@ class CLAP(ctk.CTk):
     def toggle_tools_menu(self):
         if self.tools_drawer.winfo_viewable():
             self.tools_drawer.grid_forget()
-            self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+            self.sidebar_btn_tools.configure(text="Tools", fg_color=SIDEBAR_BUTTON_FG_COLOR)
             self.settings_manager.set("tools_menu_expanded", False)
         else:
             self.tools_drawer.grid(row=1, column=0, sticky="sew", pady=(0, 10))
@@ -363,8 +364,8 @@ class CLAP(ctk.CTk):
             page_name: Name of the page being set up
         """
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         # Remove previous page
@@ -373,7 +374,7 @@ class CLAP(ctk.CTk):
         
         # Close tool menu
         self.tools_drawer.grid_forget()
-        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+        self.sidebar_btn_tools.configure(text="Tools", fg_color=SIDEBAR_BUTTON_FG_COLOR)
     
     def _start_task_thread(
         self,
@@ -464,8 +465,8 @@ class CLAP(ctk.CTk):
 
     def setup_home_page(self):
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -1131,8 +1132,8 @@ class CLAP(ctk.CTk):
     def setup_script_repository_page(self):
         """Setup the script repository page"""
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -1977,8 +1978,8 @@ class CLAP(ctk.CTk):
     def setup_settings_page(self):
         """Setup the settings page"""
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -2345,8 +2346,8 @@ class CLAP(ctk.CTk):
     def setup_history_page(self):
         """Setup the task history page"""
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
