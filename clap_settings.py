@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import re
 import copy
+from typing import Any, Dict, Optional, Union, List
 
 class SettingsManager:
     """Manages user settings and configuration for CLAP application"""
@@ -13,7 +14,7 @@ class SettingsManager:
     FREESURFER_MAX_VERSION = 9  # Maximum major version to search for
     FREESURFER_MAX_MINOR = 10    # Maximum minor version to search for
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.user_data_dir = Path(__file__).parent / "user_data"
         self.settings_file = self.user_data_dir / "settings.json"
         self.default_settings = {
@@ -33,11 +34,11 @@ class SettingsManager:
         self._ensure_user_data_dir()
         self.settings = self._load_settings()
     
-    def _ensure_user_data_dir(self):
+    def _ensure_user_data_dir(self) -> None:
         """Create user_data directory if it doesn't exist"""
         self.user_data_dir.mkdir(parents=True, exist_ok=True)
     
-    def _load_settings(self):
+    def _load_settings(self) -> Dict[str, Any]:
         """Load settings from file or create default settings"""
         if self.settings_file.exists():
             try:
@@ -53,7 +54,7 @@ class SettingsManager:
         else:
             return self.default_settings.copy()
     
-    def _deep_merge(self, base, overlay):
+    def _deep_merge(self, base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
         """
         Recursively merge overlay dict into base dict.
         Preserves keys in base that don't exist in overlay.
@@ -93,7 +94,7 @@ class SettingsManager:
         
         return result
     
-    def save_settings(self):
+    def save_settings(self) -> None:
         """Save current settings to file"""
         try:
             with open(self.settings_file, 'w') as f:
@@ -101,7 +102,7 @@ class SettingsManager:
         except IOError as e:
             print(f"Error saving settings: {e}")
     
-    def get(self, key, default=None):
+    def get(self, key: str, default: Any = None) -> Any:
         """Get a setting value"""
         keys = key.split('.')
         value = self.settings
@@ -112,7 +113,7 @@ class SettingsManager:
                 return default
         return value
     
-    def set(self, key, value):
+    def set(self, key: str, value: Any) -> None:
         """Set a setting value"""
         keys = key.split('.')
         settings = self.settings
@@ -123,11 +124,11 @@ class SettingsManager:
         settings[keys[-1]] = value
         self.save_settings()
     
-    def check_dependency(self, command):
+    def check_dependency(self, command: str) -> bool:
         """Check if an external dependency is available in PATH"""
         return shutil.which(command) is not None
     
-    def get_dependency_status(self):
+    def get_dependency_status(self) -> Dict[str, Dict[str, Any]]:
         """Check status of all external dependencies"""
         status = {}
         
