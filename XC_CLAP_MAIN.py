@@ -1090,7 +1090,7 @@ class CLAP(ctk.CTk):
         
         add_script_btn = ctk.CTkButton(
             header_frame,
-            text="+ Add New Script",
+            text="Add New Script",
             height=35,
             fg_color="#28A745",
             hover_color="#218838",
@@ -1253,7 +1253,7 @@ class CLAP(ctk.CTk):
         if script.get("project"):
             project_badge = ctk.CTkLabel(
                 badges_frame,
-                text=f"📁 {script['project']}",
+                text=script['project'],
                 font=ctk.CTkFont(family="Proxima Nova", size=10),
                 text_color=("gray10", "gray90"),
                 fg_color=("#E3F2FD", "#1E3A5F"),
@@ -1263,22 +1263,12 @@ class CLAP(ctk.CTk):
             )
             project_badge.pack(side="left", padx=(0, 5))
         
-        # Language badge with icon
-        language_icons = {
-            "Python": "🐍",
-            "Bash": "🐚",
-            "R": "📊",
-            "Matlab": "📐",
-            "JavaScript": "🟨",
-            "Perl": "🐪",
-            "Ruby": "💎"
-        }
+        # Language badge
         language = script.get("language", "Unknown")
-        icon = language_icons.get(language, "📄")
         
         language_badge = ctk.CTkLabel(
             badges_frame,
-            text=f"{icon} {language}",
+            text=language,
             font=ctk.CTkFont(family="Proxima Nova", size=10),
             text_color=("gray10", "gray90"),
             fg_color=("#FFF9C4", "#4A4A1A"),
@@ -1292,7 +1282,7 @@ class CLAP(ctk.CTk):
         if script.get("author"):
             author_badge = ctk.CTkLabel(
                 badges_frame,
-                text=f"👤 {script['author']}",
+                text=script['author'],
                 font=ctk.CTkFont(family="Proxima Nova", size=10),
                 text_color=("gray10", "gray90"),
                 fg_color=("#E8F5E9", "#1B3E1F"),
@@ -1309,8 +1299,8 @@ class CLAP(ctk.CTk):
                 colors = self.TAG_COLORS.get(tag, ("#E0E0E0", "#404040"))
                 tag_badge = ctk.CTkLabel(
                     badges_frame,
-                    text=f"🏷️ {tag}",
-                    font=ctk.CTkFont(family="Proxima Nova", size=10),
+                    text=tag.upper(),
+                    font=ctk.CTkFont(family="Proxima Nova", size=9, weight="bold"),
                     text_color=("gray10", "gray90"),
                     fg_color=colors,
                     corner_radius=5,
@@ -1877,7 +1867,7 @@ class CLAP(ctk.CTk):
         
         run_btn = ctk.CTkButton(
             action_frame,
-            text="▶ Run in Terminal",
+            text="Run in Terminal",
             height=40,
             fg_color="#6A5ACD",
             hover_color="#5B4DB8",
@@ -1888,7 +1878,7 @@ class CLAP(ctk.CTk):
         
         vscode_btn = ctk.CTkButton(
             action_frame,
-            text="📝 Open in VS Code",
+            text="Open in VS Code",
             height=40,
             fg_color="#007ACC",
             hover_color="#005A9E",
