@@ -2790,40 +2790,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "Please provide Subject Connectome, Reference Connectomes, and Output Directory.")
             return
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Z-Score Connectome",
-            "Connectome",
-            f"{len(ref_connectomes_list)} reference(s)",
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Z-Score Connectome",
+            task_type="Connectome",
+            details=f"{len(ref_connectomes_list)} reference(s)",
+            target_function=XC_CONNECTOME_TOOLBOX.z_scored_connectome,
+            args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag),
             input_files=[subject_connectome] + ref_connectomes_list,
             output_location=output_dir
         )
-        
-        self._show_task_status("Z-Score Connectome")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag), daemon=True)
-        self.current_task_thread = task
-        task.start()
 
     def on_z_score_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_z_score_complete_message)
-        else:
-            self.after(0, self.show_z_score_failed_message)
-
-    def show_z_score_complete_message(self):
-        messagebox.showinfo("Success", "Z-Score Computation Complete")
-    
-    def show_z_score_failed_message(self):
-        messagebox.showerror("Error", "Z-Score computation failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Z-Score Computation Complete",
+            failure_message="Z-Score computation failed. Check the console for details."
+        )
 
 # Display connectome thread starter
     def start_display_connectome_thread(self):
@@ -2835,18 +2819,6 @@ class CLAP(ctk.CTk):
         if not cnctms_list or not luts_list:
             messagebox.showerror("Input Error", "Please provide at least one Connectome and one LUT file.")
             return
-        
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Display Connectomes",
-            "Connectome",
-            f"{len(cnctms_list)} connectome(s)",
-            input_files=cnctms_list + luts_list,
-            output_location="Display only"
-        )
-        
-        self._show_task_status("Display Connectomes")
-        self.cancel_task_flag = False
         
         lut_map = {}
         for lut in luts_list:
@@ -2865,28 +2837,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "No valid Connectome-LUT pairs found.")
             return
 
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.display_connectome, args=(paired_data, self.on_display_complete), daemon=True)
-        self.current_task_thread = task
-        task.start()
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Display Connectomes",
+            task_type="Connectome",
+            details=f"{len(cnctms_list)} connectome(s)",
+            target_function=XC_CONNECTOME_TOOLBOX.display_connectome,
+            args=(paired_data, self.on_display_complete),
+            input_files=cnctms_list + luts_list,
+            output_location="Display only"
+        )
     
     def on_display_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_display_complete_message)
-        else:
-            self.after(0, self.show_display_failed_message)
-
-    def show_display_complete_message(self):
-        messagebox.showinfo("Success", "Connectome Display Complete")
-    
-    def show_display_failed_message(self):
-        messagebox.showerror("Error", "Connectome display failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Connectome Display Complete",
+            failure_message="Connectome display failed. Check the console for details."
+        )
 
 ## ROI Toolbox threading ##
     def start_seeg_roi_mask_thread(self):
@@ -2908,40 +2876,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "Please provide Reference Mask Image, SEEG Coordinates File, and Output Directory.")
             return
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Generate SEEG ROI Masks",
-            "ROI Toolbox",
-            f"Mode: {raw_mode}, Radius: {sel_rad}mm",
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Generate SEEG ROI Masks",
+            task_type="ROI Toolbox",
+            details=f"Mode: {raw_mode}, Radius: {sel_rad}mm",
+            target_function=XC_ROI_TOOLBOX.generate_seeg_roi_masks,
+            args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag),
             input_files=[ref_mask_img, seeg_coords_file],
             output_location=output_dir
         )
-        
-        self._show_task_status("Generate SEEG ROI Masks")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag), daemon=True)
-        self.current_task_thread = task
-        task.start()
 
     def on_seeg_roi_mask_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_seeg_roi_mask_complete_message)
-        else:
-            self.after(0, self.show_seeg_roi_mask_failed_message)
-
-    def show_seeg_roi_mask_complete_message(self):
-        messagebox.showinfo("Success", "SEEG ROI Mask Generation Complete")
-    
-    def show_seeg_roi_mask_failed_message(self):
-        messagebox.showerror("Error", "SEEG ROI mask generation failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="SEEG ROI Mask Generation Complete",
+            failure_message="SEEG ROI mask generation failed. Check the console for details."
+        )
 
 ## Segmentation Toolbox threading ##
 
@@ -3022,23 +2974,12 @@ class CLAP(ctk.CTk):
         task.start()
 
     def on_recon_all_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_recon_all_complete_message)
-        else:
-            self.after(0, self.show_recon_all_failed_message)
-
-    def show_recon_all_complete_message(self):
-        messagebox.showinfo("Success", "FreeSurfer recon-all completed")
-    
-    def show_recon_all_failed_message(self):
-        messagebox.showerror("Error", "FreeSurfer recon-all failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="FreeSurfer recon-all completed",
+            failure_message="FreeSurfer recon-all failed. Check the console for details."
+        )
 
     def start_fastsurfer_thread(self):
         """Start thread to run FastSurfer"""
@@ -3058,20 +2999,12 @@ class CLAP(ctk.CTk):
         fastsurfer_home = self.settings_manager.get("external_dependencies.fastsurfer_home", "")
         freesurfer_for_fastsurfer = self.settings_manager.get("external_dependencies.freesurfer_for_fastsurfer", "")
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "FastSurfer",
-            "Segmentation",
-            f"Subject: {subject_id}",
-            input_files=[input_image],
-            output_location=output_dir
-        )
-        
-        self._show_task_status("FastSurfer")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(
-            target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer,
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="FastSurfer",
+            task_type="Segmentation",
+            details=f"Subject: {subject_id}",
+            target_function=XC_SEGMENTATION_TOOLBOX.run_fastsurfer,
             args=(
                 input_image,
                 subject_id,
@@ -3084,29 +3017,17 @@ class CLAP(ctk.CTk):
                 self.on_fastsurfer_complete,
                 lambda: self.cancel_task_flag
             ),
-            daemon=True
+            input_files=[input_image],
+            output_location=output_dir
         )
-        self.current_task_thread = task
-        task.start()
 
     def on_fastsurfer_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_fastsurfer_complete_message)
-        else:
-            self.after(0, self.show_fastsurfer_failed_message)
-
-    def show_fastsurfer_complete_message(self):
-        messagebox.showinfo("Success", "FastSurfer completed")
-    
-    def show_fastsurfer_failed_message(self):
-        messagebox.showerror("Error", "FastSurfer failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="FastSurfer completed",
+            failure_message="FastSurfer failed. Check the console for details."
+        )
 
     def browse_freesurfer_license(self):
         """Browse for FreeSurfer license file"""
