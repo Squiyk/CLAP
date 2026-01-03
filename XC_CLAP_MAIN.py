@@ -19,6 +19,14 @@ from clap_task_logger import TaskLogger
 from script_registry import ScriptRegistry
 
 class CLAP(ctk.CTk):
+    # Tag colors for UI display (light mode, dark mode)
+    TAG_COLORS = {
+        'analysis': ("#D4EDDA", "#155724"),   # Green
+        'statistics': ("#CCE5FF", "#004085"), # Blue
+        'setup': ("#F8D7DA", "#721C24"),      # Red
+        'other': ("#E2D9F3", "#3D1A5F")       # Purple
+    }
+    
     def __init__(self):
         super().__init__()
 
@@ -1297,16 +1305,8 @@ class CLAP(ctk.CTk):
         # Tag badges
         tags = script.get("tags", [])
         if tags:
-            # Tag colors mapping
-            tag_colors = {
-                'analysis': ("#D4EDDA", "#155724"),   # Green
-                'statistics': ("#CCE5FF", "#004085"), # Blue
-                'setup': ("#F8D7DA", "#721C24"),      # Red
-                'other': ("#E2D9F3", "#3D1A5F")       # Purple
-            }
-            
             for tag in tags:
-                colors = tag_colors.get(tag, ("#E0E0E0", "#404040"))
+                colors = self.TAG_COLORS.get(tag, ("#E0E0E0", "#404040"))
                 tag_badge = ctk.CTkLabel(
                     badges_frame,
                     text=f"🏷️ {tag}",
@@ -1709,16 +1709,8 @@ class CLAP(ctk.CTk):
             tags_display_frame = ctk.CTkFrame(metadata_frame, fg_color="transparent")
             tags_display_frame.grid(row=row, column=1, padx=10, pady=5, sticky="w")
             
-            # Tag colors mapping
-            tag_colors = {
-                'analysis': ("#D4EDDA", "#155724"),   # Green
-                'statistics': ("#CCE5FF", "#004085"), # Blue
-                'setup': ("#F8D7DA", "#721C24"),      # Red
-                'other': ("#E2D9F3", "#3D1A5F")       # Purple
-            }
-            
             for tag in tags:
-                colors = tag_colors.get(tag, ("#E0E0E0", "#404040"))
+                colors = self.TAG_COLORS.get(tag, ("#E0E0E0", "#404040"))
                 tag_pill = ctk.CTkLabel(
                     tags_display_frame,
                     text=tag,
