@@ -1519,12 +1519,8 @@ class CLAP(ctk.CTk):
         tags_frame.grid(row=7, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
         
         tag_checkboxes = {}
-        tag_options = [
-            ("analysis", "Analysis"),
-            ("statistics", "Statistics"),
-            ("setup", "Setup"),
-            ("other", "Other")
-        ]
+        # Use tag options from ScriptRegistry to maintain consistency
+        tag_options = [(tag, tag.capitalize()) for tag in self.script_registry.TAG_OPTIONS.keys()]
         
         for i, (tag_value, tag_label) in enumerate(tag_options):
             cb = ctk.CTkCheckBox(

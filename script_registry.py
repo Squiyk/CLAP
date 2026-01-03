@@ -283,7 +283,7 @@ class ScriptRegistry:
             scripts = [s for s in scripts if s.get("author", "").lower() == author.lower()]
         
         if tag:
-            scripts = [s for s in scripts if tag in s.get("tags", [])]
+            scripts = [s for s in scripts if tag in (s.get("tags") or [])]
         
         if search_term:
             term = search_term.lower()
@@ -325,7 +325,7 @@ class ScriptRegistry:
         """Get list of unique tags from all scripts"""
         tags = set()
         for script in self.get_all_scripts():
-            script_tags = script.get("tags", [])
+            script_tags = script.get("tags") or []
             if script_tags:
                 tags.update(script_tags)
         return sorted(list(tags))
