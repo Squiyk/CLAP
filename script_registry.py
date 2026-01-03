@@ -35,6 +35,14 @@ class ScriptRegistry:
         'Ruby': 'ruby'
     }
     
+    # Tag options with their colors
+    TAG_OPTIONS = {
+        'analysis': '#28A745',      # Green
+        'statistics': '#007BFF',    # Blue
+        'setup': '#DC3545',         # Red
+        'other': '#6F42C1'          # Purple
+    }
+    
     def __init__(self):
         self.base_path = Path(__file__).parent
         self.registry_file = self.base_path / "registry.json"
@@ -154,7 +162,8 @@ class ScriptRegistry:
         project: str,
         description: str,
         dependencies: str,
-        author: str
+        author: str,
+        tags: List[str] = None
     ) -> bool:
         """
         Add a new script to the registry.
@@ -166,6 +175,7 @@ class ScriptRegistry:
             description: Script description
             dependencies: Required dependencies
             author: Script author
+            tags: List of tags (e.g., ['analysis', 'statistics'])
             
         Returns:
             True if successful, False otherwise
@@ -214,6 +224,7 @@ class ScriptRegistry:
                 "description": description,
                 "dependencies": dependencies,
                 "author": author,
+                "tags": tags if tags else [],
                 "added_date": datetime.now().isoformat(),
                 "relative_path": f"registry/{dest_filename}"
             }
@@ -244,6 +255,7 @@ class ScriptRegistry:
         project: Optional[str] = None,
         language: Optional[str] = None,
         author: Optional[str] = None,
+        tag: Optional[str] = None,
         search_term: Optional[str] = None
     ) -> List[Dict]:
         """
@@ -253,6 +265,7 @@ class ScriptRegistry:
             project: Filter by project name
             language: Filter by language
             author: Filter by author
+            tag: Filter by tag
             search_term: Search in name and description
             
         Returns:
@@ -268,6 +281,9 @@ class ScriptRegistry:
         
         if author:
             scripts = [s for s in scripts if s.get("author", "").lower() == author.lower()]
+        
+        if tag:
+            scripts = [s for s in scripts if tag in s.get("tags", [])]
         
         if search_term:
             term = search_term.lower()
@@ -304,6 +320,15 @@ class ScriptRegistry:
             if author:
                 authors.add(author)
         return sorted(list(authors))
+    
+    def get_unique_tags(self) -> List[str]:
+        """Get list of unique tags from all scripts"""
+        tags = set()
+        for script in self.get_all_scripts():
+            script_tags = script.get("tags", [])
+            if script_tags:
+                tags.update(script_tags)
+        return sorted(list(tags))
     
     def get_script_absolute_path(self, script: Dict) -> Path:
         """Get absolute path to a script file"""

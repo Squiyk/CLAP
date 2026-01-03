@@ -1292,21 +1292,46 @@ class CLAP(ctk.CTk):
                 padx=8,
                 pady=2
             )
-            author_badge.pack(side="left")
+            author_badge.pack(side="left", padx=(0, 5))
+        
+        # Tag badges
+        tags = script.get("tags", [])
+        if tags:
+            # Tag colors mapping
+            tag_colors = {
+                'analysis': ("#D4EDDA", "#155724"),   # Green
+                'statistics': ("#CCE5FF", "#004085"), # Blue
+                'setup': ("#F8D7DA", "#721C24"),      # Red
+                'other': ("#E2D9F3", "#3D1A5F")       # Purple
+            }
+            
+            for tag in tags:
+                colors = tag_colors.get(tag, ("#E0E0E0", "#404040"))
+                tag_badge = ctk.CTkLabel(
+                    badges_frame,
+                    text=f"🏷️ {tag}",
+                    font=ctk.CTkFont(family="Proxima Nova", size=10),
+                    text_color=("gray10", "gray90"),
+                    fg_color=colors,
+                    corner_radius=5,
+                    padx=8,
+                    pady=2
+                )
+                tag_badge.pack(side="left", padx=(0, 5))
     
     def open_add_script_dialog(self):
         """Open dialog to add a new script"""
         dialog = ctk.CTkToplevel(self)
         dialog.title("Add New Script")
-        dialog.geometry("600x550")
+        dialog.geometry("600x650")
         dialog.transient(self)
         dialog.grab_set()
         
         # Center the dialog
         dialog.update_idletasks()
         x = (dialog.winfo_screenwidth() // 2) - (600 // 2)
-        y = (dialog.winfo_screenheight() // 2) - (550 // 2)
-        dialog.geometry(f"600x550+{x}+{y}")
+        y = (dialog.winfo_screenheight() // 2) - (650 // 2)
+        dialog.geometry(f"600x650+{x}+{y}")
         
         # Main container
         container = ctk.CTkFrame(dialog, fg_color="transparent")
@@ -1491,9 +1516,39 @@ class CLAP(ctk.CTk):
         )
         author_entry.grid(row=6, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
         
+        # Tags
+        ctk.CTkLabel(
+            container,
+            text="Tags:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=7, column=0, padx=(0, 10), pady=10, sticky="nw")
+        
+        # Tags frame with checkboxes
+        tags_frame = ctk.CTkFrame(container, fg_color="transparent")
+        tags_frame.grid(row=7, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        tag_checkboxes = {}
+        tag_options = [
+            ("analysis", "Analysis"),
+            ("statistics", "Statistics"),
+            ("setup", "Setup"),
+            ("other", "Other")
+        ]
+        
+        for i, (tag_value, tag_label) in enumerate(tag_options):
+            cb = ctk.CTkCheckBox(
+                tags_frame,
+                text=tag_label,
+                font=ctk.CTkFont(family="Proxima Nova", size=13),
+                text_color=("gray30", "gray80")
+            )
+            cb.grid(row=i // 2, column=i % 2, padx=5, pady=5, sticky="w")
+            tag_checkboxes[tag_value] = cb
+        
         # Buttons
         button_frame = ctk.CTkFrame(container, fg_color="transparent")
-        button_frame.grid(row=7, column=0, columnspan=3, pady=(20, 0), sticky="ew")
+        button_frame.grid(row=8, column=0, columnspan=3, pady=(20, 0), sticky="ew")
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
         
@@ -1514,6 +1569,9 @@ class CLAP(ctk.CTk):
             dependencies = dependencies_entry.get().strip()
             author = author_entry.get().strip()
             
+            # Collect selected tags
+            selected_tags = [tag for tag, cb in tag_checkboxes.items() if cb.get() == 1]
+            
             if not language:
                 messagebox.showerror("Error", "Please specify the language.")
                 return
@@ -1529,7 +1587,8 @@ class CLAP(ctk.CTk):
                 project,
                 description,
                 dependencies,
-                author
+                author,
+                selected_tags
             )
             
             if success:
@@ -1636,6 +1695,41 @@ class CLAP(ctk.CTk):
             ).grid(row=row, column=1, padx=10, pady=5, sticky="w")
             
             row += 1
+        
+        # Tags display
+        tags = script.get("tags", [])
+        if tags:
+            ctk.CTkLabel(
+                metadata_frame,
+                text="Tags:",
+                font=ctk.CTkFont(family="Proxima Nova", size=12, weight="bold"),
+                text_color=("gray30", "gray80")
+            ).grid(row=row, column=0, padx=15, pady=5, sticky="w")
+            
+            tags_display_frame = ctk.CTkFrame(metadata_frame, fg_color="transparent")
+            tags_display_frame.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+            
+            # Tag colors mapping
+            tag_colors = {
+                'analysis': ("#D4EDDA", "#155724"),   # Green
+                'statistics': ("#CCE5FF", "#004085"), # Blue
+                'setup': ("#F8D7DA", "#721C24"),      # Red
+                'other': ("#E2D9F3", "#3D1A5F")       # Purple
+            }
+            
+            for tag in tags:
+                colors = tag_colors.get(tag, ("#E0E0E0", "#404040"))
+                tag_pill = ctk.CTkLabel(
+                    tags_display_frame,
+                    text=tag,
+                    font=ctk.CTkFont(family="Proxima Nova", size=10),
+                    text_color=("gray10", "gray90"),
+                    fg_color=colors,
+                    corner_radius=10,
+                    padx=10,
+                    pady=3
+                )
+                tag_pill.pack(side="left", padx=(0, 5))
         
         # Description section
         if script.get("description"):
