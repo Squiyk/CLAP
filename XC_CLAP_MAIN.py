@@ -1734,24 +1734,27 @@ class CLAP(ctk.CTk):
             try:
                 if system == "Darwin":  # macOS
                     # Use AppleScript to open Terminal and run command
-                    # Escape single quotes in command for AppleScript
-                    escaped_command = command.replace("\\", "\\\\").replace('"', '\\"')
+                    # Use shlex.quote to safely escape the command
+                    safe_command = shlex.quote(command)
+                    # For AppleScript, we need to escape quotes differently
+                    # The command is already shell-safe from shlex.quote
                     applescript = f'''
                     tell application "Terminal"
                         activate
-                        do script "{escaped_command}"
+                        do script {safe_command}
                     end tell
                     '''
                     subprocess.Popen(["osascript", "-e", applescript])
                     
                 elif system == "Linux":
                     # Try common Linux terminals with safe command passing
-                    # Use array form to avoid shell injection
+                    # Use shlex.quote to prevent command injection
+                    safe_command = shlex.quote(command)
                     terminals = [
-                        ["gnome-terminal", "--", "bash", "-c", command + "; exec bash"],
-                        ["xterm", "-e", "bash", "-c", command + "; bash"],
-                        ["konsole", "-e", "bash", "-c", command + "; bash"],
-                        ["xfce4-terminal", "-e", "bash", "-c", command + "; bash"]
+                        ["gnome-terminal", "--", "bash", "-c", f"{command}; exec bash"],
+                        ["xterm", "-e", "bash", "-c", f"{command}; bash"],
+                        ["konsole", "-e", "bash", "-c", f"{command}; bash"],
+                        ["xfce4-terminal", "-e", "bash", "-c", f"{command}; bash"]
                     ]
                     
                     success = False

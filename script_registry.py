@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import shlex
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -23,11 +24,12 @@ class ScriptRegistry:
     }
     
     # Extension to interpreter command mapping
+    # Note: Matlab is special-cased in get_interpreter_command()
     LANGUAGE_INTERPRETERS = {
         'Python': 'python',
         'Bash': 'bash',
         'R': 'Rscript',
-        'Matlab': 'matlab -batch "run(\'{script}\')"',
+        'Matlab': 'matlab',
         'JavaScript': 'node',
         'Perl': 'perl',
         'Ruby': 'ruby'
@@ -309,25 +311,30 @@ class ScriptRegistry:
     
     def get_interpreter_command(self, language: str, script_path: str) -> str:
         """
-        Get the command to execute a script
+        Get the command to execute a script with proper shell escaping
         
         Args:
             language: Programming language
             script_path: Absolute path to script file
             
         Returns:
-            Command string to execute the script
+            Command string to execute the script (safely quoted)
         """
         interpreter = self.LANGUAGE_INTERPRETERS.get(language, "")
         
         if not interpreter:
             return ""
         
-        # Special handling for Matlab
-        if language == "Matlab":
-            return interpreter.format(script=script_path)
+        # Use shlex.quote to safely escape the script path
+        safe_path = shlex.quote(script_path)
         
-        return f"{interpreter} {script_path}"
+        # Special handling for Matlab - need to quote for both shell and Matlab
+        if language == "Matlab":
+            # Double escape: once for Matlab string, once for shell
+            matlab_safe = script_path.replace("'", "''")  # Matlab string escaping
+            return f"{interpreter} -batch \"run('{matlab_safe}')\""
+        
+        return f"{interpreter} {safe_path}"
     
     def delete_script(self, filename: str) -> bool:
         """
