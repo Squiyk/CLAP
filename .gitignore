@@ -3,3 +3,11 @@ __pycache__/
 *.pyc
 complementary_files/clap_env/
 user_data/
+registry/*.py
+registry/*.sh
+registry/*.R
+registry/*.r
+registry/*.m
+registry/*.js
+registry/*.pl
+registry/*.rb

@@ -3,6 +3,8 @@ import sys
 import os
 from pathlib import Path
 import threading
+import subprocess
+import platform
 from tkinter import filedialog, messagebox
 from PIL import Image
 from datetime import datetime
@@ -13,6 +15,7 @@ import XC_SEGMENTATION_TOOLBOX
 import pygame
 from clap_settings import SettingsManager
 from clap_task_logger import TaskLogger
+from script_registry import ScriptRegistry
 
 class CLAP(ctk.CTk):
     def __init__(self):
@@ -23,6 +26,7 @@ class CLAP(ctk.CTk):
         # Initialize settings and task logger
         self.settings_manager = SettingsManager()
         self.task_logger = TaskLogger()
+        self.script_registry = ScriptRegistry()
         self.current_task_thread = None
         self.current_task_id = None
         self.cancel_task_flag = False
@@ -90,6 +94,9 @@ class CLAP(ctk.CTk):
 
         self.tools_btn_segmentation = ctk.CTkButton(self.tools_drawer, text="Segmentation Toolbox", command=self.setup_segmentation_toolbox_page)
         self.tools_btn_segmentation.pack(fill="x", padx=10, pady=5)
+        
+        self.tools_btn_script_repo = ctk.CTkButton(self.tools_drawer, text="Script Repository", command=self.setup_script_repository_page)
+        self.tools_btn_script_repo.pack(fill="x", padx=10, pady=5)
         
         # Bottom buttons (Tools, Settings, History)
         self.sidebar_btn_tools = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
@@ -165,6 +172,7 @@ class CLAP(ctk.CTk):
             "connectome": self.setup_connectome_toolbox_page,
             "roi": self.setup_ROI_toolbox_page,
             "segmentation": self.setup_segmentation_toolbox_page,
+            "script_repository": self.setup_script_repository_page,
             "settings": self.setup_settings_page,
             "history": self.setup_history_page
         }
@@ -1036,6 +1044,779 @@ class CLAP(ctk.CTk):
                     self.fastsurfer_gpu_toggle.deselect()
             except Exception:
                 pass
+
+
+    def setup_script_repository_page(self):
+        """Setup the script repository page"""
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", "home")
+        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+            self._save_page_form_values(last_page)
+        
+        self.clear_main_pannel()
+        self._save_current_page("script_repository")
+        
+        # Close tool menu
+        self.tools_drawer.grid_forget()
+        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+        
+        # Setup new page
+        self.script_repository_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
+        self.script_repository_page.pack(fill="both", expand=True, padx=20, pady=20)
+        self.script_repository_page.grid_columnconfigure(0, weight=1)
+        self.script_repository_page.grid_rowconfigure(1, weight=1)
+        
+        # Header with title and add button
+        header_frame = ctk.CTkFrame(self.script_repository_page, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header_frame.grid_columnconfigure(0, weight=1)
+        
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="Script Repository",
+            font=ctk.CTkFont(family="Proxima Nova", size=24, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        title_label.grid(row=0, column=0, padx=0, pady=0, sticky="w")
+        
+        add_script_btn = ctk.CTkButton(
+            header_frame,
+            text="+ Add New Script",
+            height=35,
+            fg_color="#28A745",
+            hover_color="#218838",
+            font=ctk.CTkFont(family="Proxima Nova", size=13, weight="bold"),
+            command=self.open_add_script_dialog
+        )
+        add_script_btn.grid(row=0, column=1, padx=10, pady=0, sticky="e")
+        
+        # Filter bar
+        filter_frame = ctk.CTkFrame(
+            self.script_repository_page,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        filter_frame.grid(row=0, column=0, sticky="ew", pady=(40, 10))
+        filter_frame.grid_columnconfigure(4, weight=1)
+        
+        # Project filter
+        ctk.CTkLabel(
+            filter_frame,
+            text="Project:",
+            font=ctk.CTkFont(family="Proxima Nova", size=12),
+            text_color=("gray30", "gray80")
+        ).grid(row=0, column=0, padx=(10, 5), pady=10, sticky="w")
+        
+        projects = ["All"] + self.script_registry.get_unique_projects()
+        self.project_filter = ctk.CTkOptionMenu(
+            filter_frame,
+            values=projects,
+            width=120,
+            command=lambda _: self.refresh_script_list()
+        )
+        self.project_filter.set("All")
+        self.project_filter.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="w")
+        
+        # Language filter
+        ctk.CTkLabel(
+            filter_frame,
+            text="Language:",
+            font=ctk.CTkFont(family="Proxima Nova", size=12),
+            text_color=("gray30", "gray80")
+        ).grid(row=0, column=2, padx=(10, 5), pady=10, sticky="w")
+        
+        languages = ["All"] + self.script_registry.get_unique_languages()
+        self.language_filter = ctk.CTkOptionMenu(
+            filter_frame,
+            values=languages,
+            width=120,
+            command=lambda _: self.refresh_script_list()
+        )
+        self.language_filter.set("All")
+        self.language_filter.grid(row=0, column=3, padx=(0, 10), pady=10, sticky="w")
+        
+        # Search box
+        self.search_entry = ctk.CTkEntry(
+            filter_frame,
+            placeholder_text="Search scripts...",
+            height=30,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        self.search_entry.grid(row=0, column=4, padx=10, pady=10, sticky="ew")
+        self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_script_list())
+        
+        # Scripts list container
+        self.scripts_list_frame = ctk.CTkScrollableFrame(
+            self.script_repository_page,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=10,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        self.scripts_list_frame.grid(row=1, column=0, sticky="nsew")
+        self.scripts_list_frame.grid_columnconfigure(0, weight=1)
+        
+        # Load scripts
+        self.refresh_script_list()
+    
+    def refresh_script_list(self):
+        """Refresh the scripts list based on current filters"""
+        # Clear current list
+        for widget in self.scripts_list_frame.winfo_children():
+            widget.destroy()
+        
+        # Get filter values
+        project = self.project_filter.get() if self.project_filter.get() != "All" else None
+        language = self.language_filter.get() if self.language_filter.get() != "All" else None
+        search_term = self.search_entry.get().strip() if self.search_entry.get() else None
+        
+        # Get filtered scripts
+        scripts = self.script_registry.filter_scripts(
+            project=project,
+            language=language,
+            search_term=search_term
+        )
+        
+        if not scripts:
+            no_scripts_label = ctk.CTkLabel(
+                self.scripts_list_frame,
+                text="No scripts found" if (project or language or search_term) else "No scripts in repository. Click 'Add New Script' to get started.",
+                font=ctk.CTkFont(family="Proxima Nova", size=14),
+                text_color=("gray40", "gray70")
+            )
+            no_scripts_label.grid(row=0, column=0, padx=20, pady=20)
+        else:
+            for idx, script in enumerate(scripts):
+                self._create_script_card(self.scripts_list_frame, idx, script)
+    
+    def _create_script_card(self, parent, idx, script):
+        """Create a script card in the list"""
+        card_frame = ctk.CTkFrame(
+            parent,
+            fg_color=("gray95", "#1E1E1E"),
+            corner_radius=5,
+            border_width=1,
+            border_color=("#D0D0D0", "#404040")
+        )
+        card_frame.grid(row=idx, column=0, padx=10, pady=5, sticky="ew")
+        card_frame.grid_columnconfigure(1, weight=1)
+        
+        # Make card clickable
+        card_frame.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+        
+        # Script name (header)
+        name_label = ctk.CTkLabel(
+            card_frame,
+            text=script.get("name", "Unknown"),
+            font=ctk.CTkFont(family="Proxima Nova", size=16, weight="bold"),
+            text_color=("gray10", "gray90"),
+            anchor="w"
+        )
+        name_label.grid(row=0, column=0, columnspan=3, padx=15, pady=(12, 5), sticky="w")
+        name_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+        
+        # Description
+        description = script.get("description", "No description")
+        if len(description) > 100:
+            description = description[:100] + "..."
+        
+        desc_label = ctk.CTkLabel(
+            card_frame,
+            text=description,
+            font=ctk.CTkFont(family="Proxima Nova", size=12),
+            text_color=("gray40", "gray70"),
+            anchor="w",
+            wraplength=600
+        )
+        desc_label.grid(row=1, column=0, columnspan=3, padx=15, pady=(0, 8), sticky="w")
+        desc_label.bind("<Button-1>", lambda e: self.open_script_inspector(script))
+        
+        # Badges row
+        badges_frame = ctk.CTkFrame(card_frame, fg_color="transparent")
+        badges_frame.grid(row=2, column=0, padx=15, pady=(0, 12), sticky="w")
+        
+        # Project badge
+        if script.get("project"):
+            project_badge = ctk.CTkLabel(
+                badges_frame,
+                text=f"📁 {script['project']}",
+                font=ctk.CTkFont(family="Proxima Nova", size=10),
+                text_color=("gray10", "gray90"),
+                fg_color=("#E3F2FD", "#1E3A5F"),
+                corner_radius=5,
+                padx=8,
+                pady=2
+            )
+            project_badge.pack(side="left", padx=(0, 5))
+        
+        # Language badge with icon
+        language_icons = {
+            "Python": "🐍",
+            "Bash": "🐚",
+            "R": "📊",
+            "Matlab": "📐",
+            "JavaScript": "🟨",
+            "Perl": "🐪",
+            "Ruby": "💎"
+        }
+        language = script.get("language", "Unknown")
+        icon = language_icons.get(language, "📄")
+        
+        language_badge = ctk.CTkLabel(
+            badges_frame,
+            text=f"{icon} {language}",
+            font=ctk.CTkFont(family="Proxima Nova", size=10),
+            text_color=("gray10", "gray90"),
+            fg_color=("#FFF9C4", "#4A4A1A"),
+            corner_radius=5,
+            padx=8,
+            pady=2
+        )
+        language_badge.pack(side="left", padx=(0, 5))
+        
+        # Author badge
+        if script.get("author"):
+            author_badge = ctk.CTkLabel(
+                badges_frame,
+                text=f"👤 {script['author']}",
+                font=ctk.CTkFont(family="Proxima Nova", size=10),
+                text_color=("gray10", "gray90"),
+                fg_color=("#E8F5E9", "#1B3E1F"),
+                corner_radius=5,
+                padx=8,
+                pady=2
+            )
+            author_badge.pack(side="left")
+    
+    def open_add_script_dialog(self):
+        """Open dialog to add a new script"""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Add New Script")
+        dialog.geometry("600x550")
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (600 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (550 // 2)
+        dialog.geometry(f"600x550+{x}+{y}")
+        
+        # Main container
+        container = ctk.CTkFrame(dialog, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+        container.grid_columnconfigure(1, weight=1)
+        
+        # Title
+        title_label = ctk.CTkLabel(
+            container,
+            text="Import Script to Repository",
+            font=ctk.CTkFont(family="Proxima Nova", size=18, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky="w")
+        
+        # File selection
+        ctk.CTkLabel(
+            container,
+            text="Script File:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=1, column=0, padx=(0, 10), pady=10, sticky="w")
+        
+        file_entry = ctk.CTkEntry(
+            container,
+            height=35,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        file_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        
+        def browse_script_file():
+            filetypes = [
+                ("All Script Files", "*.py *.sh *.R *.r *.m *.js *.pl *.rb"),
+                ("Python Files", "*.py"),
+                ("Bash Scripts", "*.sh"),
+                ("R Scripts", "*.R *.r"),
+                ("Matlab Scripts", "*.m"),
+                ("JavaScript Files", "*.js"),
+                ("All Files", "*.*")
+            ]
+            path = filedialog.askopenfilename(title="Select Script File", filetypes=filetypes)
+            if path:
+                file_entry.delete(0, ctk.END)
+                file_entry.insert(0, path)
+                
+                # Auto-detect language
+                language = self.script_registry.detect_language(path)
+                language_entry.delete(0, ctk.END)
+                language_entry.insert(0, language)
+                
+                # Auto-extract description
+                description = self.script_registry.extract_description_from_file(path)
+                if description:
+                    description_text.delete("0.0", "end")
+                    description_text.insert("0.0", description)
+                
+                # Auto-fill author from git config or environment
+                if not author_entry.get():
+                    try:
+                        import subprocess
+                        result = subprocess.run(
+                            ["git", "config", "user.name"],
+                            capture_output=True,
+                            text=True,
+                            timeout=2
+                        )
+                        if result.returncode == 0:
+                            git_user = result.stdout.strip()
+                            if git_user:
+                                author_entry.delete(0, ctk.END)
+                                author_entry.insert(0, git_user)
+                    except:
+                        pass
+        
+        browse_btn = ctk.CTkButton(
+            container,
+            text="Browse...",
+            width=100,
+            height=35,
+            fg_color=("#F0F0F0", "#3A3A3A"),
+            text_color=("black", "white"),
+            hover_color=("#D9D9D9", "#505050"),
+            command=browse_script_file
+        )
+        browse_btn.grid(row=1, column=2, padx=(0, 0), pady=10)
+        
+        # Language
+        ctk.CTkLabel(
+            container,
+            text="Language:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=2, column=0, padx=(0, 10), pady=10, sticky="w")
+        
+        language_entry = ctk.CTkEntry(
+            container,
+            height=35,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        language_entry.grid(row=2, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        # Project
+        ctk.CTkLabel(
+            container,
+            text="Project:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=3, column=0, padx=(0, 10), pady=10, sticky="w")
+        
+        existing_projects = self.script_registry.get_unique_projects()
+        project_values = ["<New Project>"] + existing_projects
+        
+        project_combobox = ctk.CTkComboBox(
+            container,
+            values=project_values,
+            height=35,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        project_combobox.set("<New Project>")
+        project_combobox.grid(row=3, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        # Description
+        ctk.CTkLabel(
+            container,
+            text="Description:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=4, column=0, padx=(0, 10), pady=10, sticky="nw")
+        
+        description_text = ctk.CTkTextbox(
+            container,
+            height=100,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        description_text.grid(row=4, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        # Dependencies
+        ctk.CTkLabel(
+            container,
+            text="Dependencies:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=5, column=0, padx=(0, 10), pady=10, sticky="w")
+        
+        dependencies_entry = ctk.CTkEntry(
+            container,
+            height=35,
+            placeholder_text="e.g., numpy, pandas, scipy",
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        dependencies_entry.grid(row=5, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        # Author
+        ctk.CTkLabel(
+            container,
+            text="Author:",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            text_color=("gray30", "gray80")
+        ).grid(row=6, column=0, padx=(0, 10), pady=10, sticky="w")
+        
+        author_entry = ctk.CTkEntry(
+            container,
+            height=35,
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#343638"),
+            text_color=("black", "white"),
+            border_width=2
+        )
+        author_entry.grid(row=6, column=1, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        # Buttons
+        button_frame = ctk.CTkFrame(container, fg_color="transparent")
+        button_frame.grid(row=7, column=0, columnspan=3, pady=(20, 0), sticky="ew")
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+        
+        def save_script():
+            # Validate inputs
+            file_path = file_entry.get().strip()
+            if not file_path:
+                messagebox.showerror("Error", "Please select a script file.")
+                return
+            
+            if not os.path.exists(file_path):
+                messagebox.showerror("Error", "Selected file does not exist.")
+                return
+            
+            language = language_entry.get().strip()
+            project = project_combobox.get().strip()
+            description = description_text.get("0.0", "end").strip()
+            dependencies = dependencies_entry.get().strip()
+            author = author_entry.get().strip()
+            
+            if not language:
+                messagebox.showerror("Error", "Please specify the language.")
+                return
+            
+            if not project or project == "<New Project>":
+                messagebox.showerror("Error", "Please specify a project name.")
+                return
+            
+            # Add script to registry
+            success = self.script_registry.add_script(
+                file_path,
+                language,
+                project,
+                description,
+                dependencies,
+                author
+            )
+            
+            if success:
+                messagebox.showinfo("Success", "Script added to repository successfully!")
+                dialog.destroy()
+                # Refresh the script list and filters
+                self.setup_script_repository_page()
+            else:
+                messagebox.showerror("Error", "Failed to add script to repository.")
+        
+        save_btn = ctk.CTkButton(
+            button_frame,
+            text="Save",
+            height=40,
+            fg_color="#28A745",
+            hover_color="#218838",
+            font=ctk.CTkFont(family="Proxima Nova", size=14, weight="bold"),
+            command=save_script
+        )
+        save_btn.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        
+        cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            height=40,
+            fg_color="#6C757D",
+            hover_color="#5A6268",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=dialog.destroy
+        )
+        cancel_btn.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+    
+    def open_script_inspector(self, script):
+        """Open detailed inspector modal for a script"""
+        inspector = ctk.CTkToplevel(self)
+        inspector.title(f"Script Inspector - {script.get('name', 'Unknown')}")
+        inspector.geometry("900x700")
+        inspector.transient(self)
+        inspector.grab_set()
+        
+        # Center the inspector
+        inspector.update_idletasks()
+        x = (inspector.winfo_screenwidth() // 2) - (900 // 2)
+        y = (inspector.winfo_screenheight() // 2) - (700 // 2)
+        inspector.geometry(f"900x700+{x}+{y}")
+        
+        # Main container
+        container = ctk.CTkFrame(inspector, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+        container.grid_columnconfigure(0, weight=1)
+        container.grid_rowconfigure(1, weight=1)
+        
+        # Header with script name
+        header_frame = ctk.CTkFrame(container, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header_frame.grid_columnconfigure(0, weight=1)
+        
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text=script.get("name", "Unknown"),
+            font=ctk.CTkFont(family="Proxima Nova", size=20, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        title_label.grid(row=0, column=0, sticky="w")
+        
+        # Metadata row
+        metadata_frame = ctk.CTkFrame(
+            container,
+            fg_color=("gray95", "#1E1E1E"),
+            corner_radius=5
+        )
+        metadata_frame.grid(row=0, column=0, sticky="ew", pady=(40, 10))
+        metadata_frame.grid_columnconfigure(1, weight=1)
+        
+        # Display metadata
+        row = 0
+        for label, key in [
+            ("Language:", "language"),
+            ("Project:", "project"),
+            ("Author:", "author"),
+            ("Dependencies:", "dependencies"),
+            ("Added:", "added_date")
+        ]:
+            value = script.get(key, "N/A")
+            if key == "added_date" and value != "N/A":
+                try:
+                    dt = datetime.fromisoformat(value)
+                    value = dt.strftime("%Y-%m-%d %H:%M")
+                except:
+                    pass
+            
+            ctk.CTkLabel(
+                metadata_frame,
+                text=label,
+                font=ctk.CTkFont(family="Proxima Nova", size=12, weight="bold"),
+                text_color=("gray30", "gray80")
+            ).grid(row=row, column=0, padx=15, pady=5, sticky="w")
+            
+            ctk.CTkLabel(
+                metadata_frame,
+                text=value,
+                font=ctk.CTkFont(family="Proxima Nova", size=12),
+                text_color=("gray10", "gray90")
+            ).grid(row=row, column=1, padx=10, pady=5, sticky="w")
+            
+            row += 1
+        
+        # Description section
+        if script.get("description"):
+            desc_frame = ctk.CTkFrame(
+                container,
+                fg_color=("white", "#2B2B2B"),
+                corner_radius=5,
+                border_width=1,
+                border_color=("#E0E0E0", "#404040")
+            )
+            desc_frame.grid(row=1, column=0, sticky="ew", pady=10)
+            
+            ctk.CTkLabel(
+                desc_frame,
+                text="Description:",
+                font=ctk.CTkFont(family="Proxima Nova", size=12, weight="bold"),
+                text_color=("gray30", "gray80")
+            ).pack(anchor="w", padx=15, pady=(10, 5))
+            
+            ctk.CTkLabel(
+                desc_frame,
+                text=script.get("description", ""),
+                font=ctk.CTkFont(family="Proxima Nova", size=12),
+                text_color=("gray10", "gray90"),
+                wraplength=800,
+                justify="left"
+            ).pack(anchor="w", padx=15, pady=(0, 10))
+        
+        # Code preview
+        code_frame = ctk.CTkFrame(
+            container,
+            fg_color=("white", "#2B2B2B"),
+            corner_radius=5,
+            border_width=1,
+            border_color=("#E0E0E0", "#404040")
+        )
+        code_frame.grid(row=2, column=0, sticky="nsew", pady=10)
+        code_frame.grid_columnconfigure(0, weight=1)
+        code_frame.grid_rowconfigure(1, weight=1)
+        
+        ctk.CTkLabel(
+            code_frame,
+            text="Code Preview:",
+            font=ctk.CTkFont(family="Proxima Nova", size=12, weight="bold"),
+            text_color=("gray30", "gray80")
+        ).grid(row=0, column=0, padx=15, pady=(10, 5), sticky="w")
+        
+        code_textbox = ctk.CTkTextbox(
+            code_frame,
+            wrap="none",
+            font=ctk.CTkFont(family="Courier", size=11),
+            border_color=("#D0D0D0", "#505050"),
+            fg_color=("white", "#1E1E1E"),
+            text_color=("black", "white"),
+            border_width=1
+        )
+        code_textbox.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="nsew")
+        
+        # Load script content
+        try:
+            script_path = self.script_registry.get_script_absolute_path(script)
+            with open(script_path, 'r', encoding='utf-8') as f:
+                code_content = f.read()
+                code_textbox.insert("0.0", code_content)
+        except Exception as e:
+            code_textbox.insert("0.0", f"Error loading script: {e}")
+        
+        code_textbox.configure(state="disabled")  # Make read-only
+        
+        # Action buttons
+        action_frame = ctk.CTkFrame(container, fg_color="transparent")
+        action_frame.grid(row=3, column=0, pady=(10, 0), sticky="ew")
+        action_frame.grid_columnconfigure(0, weight=1)
+        action_frame.grid_columnconfigure(1, weight=1)
+        action_frame.grid_columnconfigure(2, weight=1)
+        
+        def run_in_terminal():
+            """Run the script in a native terminal window"""
+            script_path = self.script_registry.get_script_absolute_path(script)
+            language = script.get("language", "")
+            
+            if not language:
+                messagebox.showerror("Error", "Unknown language. Cannot determine how to run this script.")
+                return
+            
+            # Get the command to run
+            command = self.script_registry.get_interpreter_command(language, str(script_path))
+            
+            if not command:
+                messagebox.showerror("Error", f"No interpreter configured for {language}")
+                return
+            
+            # Detect OS and open terminal
+            system = platform.system()
+            
+            try:
+                if system == "Darwin":  # macOS
+                    # Use AppleScript to open Terminal and run command
+                    applescript = f'''
+                    tell application "Terminal"
+                        activate
+                        do script "{command}"
+                    end tell
+                    '''
+                    subprocess.Popen(["osascript", "-e", applescript])
+                    
+                elif system == "Linux":
+                    # Try common Linux terminals
+                    terminals = [
+                        ["gnome-terminal", "--", "bash", "-c", f"{command}; exec bash"],
+                        ["xterm", "-e", f"{command}; bash"],
+                        ["konsole", "-e", f"{command}; bash"],
+                        ["xfce4-terminal", "-e", f"{command}; bash"]
+                    ]
+                    
+                    success = False
+                    for term_cmd in terminals:
+                        try:
+                            subprocess.Popen(term_cmd)
+                            success = True
+                            break
+                        except FileNotFoundError:
+                            continue
+                    
+                    if not success:
+                        messagebox.showerror("Error", "Could not find a suitable terminal emulator.")
+                        return
+                else:
+                    messagebox.showerror("Error", f"Terminal launching not supported on {system}")
+                    return
+                
+                messagebox.showinfo("Success", f"Script launched in terminal")
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to launch terminal: {e}")
+        
+        def open_in_vscode():
+            """Open the script in VS Code"""
+            script_path = self.script_registry.get_script_absolute_path(script)
+            
+            try:
+                # Try to open in VS Code
+                subprocess.Popen(["code", str(script_path)])
+                messagebox.showinfo("Success", "Script opened in VS Code")
+            except FileNotFoundError:
+                messagebox.showerror("Error", "VS Code not found. Please install VS Code or add it to your PATH.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open in VS Code: {e}")
+        
+        run_btn = ctk.CTkButton(
+            action_frame,
+            text="▶ Run in Terminal",
+            height=40,
+            fg_color="#6A5ACD",
+            hover_color="#5B4DB8",
+            font=ctk.CTkFont(family="Proxima Nova", size=14, weight="bold"),
+            command=run_in_terminal
+        )
+        run_btn.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        
+        vscode_btn = ctk.CTkButton(
+            action_frame,
+            text="📝 Open in VS Code",
+            height=40,
+            fg_color="#007ACC",
+            hover_color="#005A9E",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=open_in_vscode
+        )
+        vscode_btn.grid(row=0, column=1, padx=5, sticky="ew")
+        
+        close_btn = ctk.CTkButton(
+            action_frame,
+            text="Close",
+            height=40,
+            fg_color="#6C757D",
+            hover_color="#5A6268",
+            font=ctk.CTkFont(family="Proxima Nova", size=14),
+            command=inspector.destroy
+        )
+        close_btn.grid(row=0, column=2, padx=(5, 0), sticky="ew")
 
 
     def setup_settings_page(self):
