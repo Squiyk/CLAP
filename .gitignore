@@ -11,3 +11,4 @@ registry/*.m
 registry/*.js
 registry/*.pl
 registry/*.rb
+!registry/README.md

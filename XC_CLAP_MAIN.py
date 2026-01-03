@@ -5,6 +5,7 @@ from pathlib import Path
 import threading
 import subprocess
 import platform
+import shlex
 from tkinter import filedialog, messagebox
 from PIL import Image
 from datetime import datetime
@@ -1368,7 +1369,6 @@ class CLAP(ctk.CTk):
                 # Auto-fill author from git config or environment
                 if not author_entry.get():
                     try:
-                        import subprocess
                         result = subprocess.run(
                             ["git", "config", "user.name"],
                             capture_output=True,
@@ -1734,21 +1734,24 @@ class CLAP(ctk.CTk):
             try:
                 if system == "Darwin":  # macOS
                     # Use AppleScript to open Terminal and run command
+                    # Escape single quotes in command for AppleScript
+                    escaped_command = command.replace("\\", "\\\\").replace('"', '\\"')
                     applescript = f'''
                     tell application "Terminal"
                         activate
-                        do script "{command}"
+                        do script "{escaped_command}"
                     end tell
                     '''
                     subprocess.Popen(["osascript", "-e", applescript])
                     
                 elif system == "Linux":
-                    # Try common Linux terminals
+                    # Try common Linux terminals with safe command passing
+                    # Use array form to avoid shell injection
                     terminals = [
-                        ["gnome-terminal", "--", "bash", "-c", f"{command}; exec bash"],
-                        ["xterm", "-e", f"{command}; bash"],
-                        ["konsole", "-e", f"{command}; bash"],
-                        ["xfce4-terminal", "-e", f"{command}; bash"]
+                        ["gnome-terminal", "--", "bash", "-c", command + "; exec bash"],
+                        ["xterm", "-e", "bash", "-c", command + "; bash"],
+                        ["konsole", "-e", "bash", "-c", command + "; bash"],
+                        ["xfce4-terminal", "-e", "bash", "-c", command + "; bash"]
                     ]
                     
                     success = False

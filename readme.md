@@ -8,6 +8,7 @@ CLAP is designed as a tool to simplify usage of common tools used in brain resea
 - **Connectome Toolbox**: Generate and analyze structural connectomes from tractography
 - **ROI Parcelation Toolbox**: Generate ROI masks from SEEG coordinates
 - **Segmentation Toolbox**: FreeSurfer and FastSurfer integration
+- **Script Repository**: Organize, discover, and execute lab scripts from Python, Bash, R, Matlab, and more
 
 ## Toolboxes
 
@@ -15,6 +16,13 @@ CLAP is designed as a tool to simplify usage of common tools used in brain resea
 - **Launch Freeview**: Visualize MRI data (with or without pre-loaded images)
 - **Run recon-all**: Complete FreeSurfer cortical reconstruction pipeline with automatic multi-core optimization
 - **Run FastSurfer**: Fast deep learning-based segmentation alternative with GPU acceleration support
+
+### Script Repository
+- **Import Scripts**: Add Python, Bash, R, Matlab, and other scripts to a centralized repository
+- **Organize by Project**: Categorize scripts by project with metadata including description, dependencies, and author
+- **Quick Discovery**: Filter and search scripts by project, language, author, or keywords
+- **One-Click Execution**: Run scripts directly in a terminal window or open them in VS Code for editing
+- **Code Preview**: View script contents with syntax highlighting before execution
 
 ## Getting Started
 

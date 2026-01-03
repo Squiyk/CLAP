@@ -77,6 +77,13 @@ class ScriptRegistry:
         """
         Try to extract description from file comments.
         Looks for comment blocks at the beginning of the file.
+        
+        Args:
+            file_path: Path to the script file
+            
+        Returns:
+            String containing the extracted description (max 200 chars).
+            Returns empty string if no description found or error occurs.
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -152,8 +159,8 @@ class ScriptRegistry:
         
         Args:
             source_file_path: Path to the source script file
-            language: Programming language
-            project: Project name/category
+            language: Programming language (required, non-empty)
+            project: Project name/category (required, non-empty)
             description: Script description
             dependencies: Required dependencies
             author: Script author
@@ -162,6 +169,19 @@ class ScriptRegistry:
             True if successful, False otherwise
         """
         try:
+            # Validate inputs
+            if not source_file_path or not source_file_path.strip():
+                print("Error: Source file path is required")
+                return False
+            
+            if not language or not language.strip():
+                print("Error: Language is required")
+                return False
+            
+            if not project or not project.strip():
+                print("Error: Project name is required")
+                return False
+            
             source_path = Path(source_file_path)
             
             if not source_path.exists():
