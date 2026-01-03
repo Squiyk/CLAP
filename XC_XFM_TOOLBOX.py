@@ -132,7 +132,7 @@ def apply_existing_xfm(output_folder, xfm_files, moving_image, reference_image, 
         base = os.path.basename(path)
         if base.endswith(".nii.gz"):
             return base[:-7]
-        elif base.endswith(". nii"):
+        elif base.endswith(".nii"):
             return base[:-4]
         return os.path.splitext(base)[0]
     
