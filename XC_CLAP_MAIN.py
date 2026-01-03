@@ -1073,7 +1073,7 @@ class CLAP(ctk.CTk):
         self.script_repository_page = ctk.CTkFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
         self.script_repository_page.pack(fill="both", expand=True, padx=20, pady=20)
         self.script_repository_page.grid_columnconfigure(0, weight=1)
-        self.script_repository_page.grid_rowconfigure(1, weight=1)
+        self.script_repository_page.grid_rowconfigure(2, weight=1)
         
         # Header with title and add button
         header_frame = ctk.CTkFrame(self.script_repository_page, fg_color="transparent")
@@ -1107,7 +1107,7 @@ class CLAP(ctk.CTk):
             border_width=1,
             border_color=("#E0E0E0", "#404040")
         )
-        filter_frame.grid(row=0, column=0, sticky="ew", pady=(40, 10))
+        filter_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         filter_frame.grid_columnconfigure(4, weight=1)
         
         # Project filter
@@ -1167,7 +1167,7 @@ class CLAP(ctk.CTk):
             border_width=1,
             border_color=("#E0E0E0", "#404040")
         )
-        self.scripts_list_frame.grid(row=1, column=0, sticky="nsew")
+        self.scripts_list_frame.grid(row=2, column=0, sticky="nsew")
         self.scripts_list_frame.grid_columnconfigure(0, weight=1)
         
         # Load scripts
