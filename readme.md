@@ -26,8 +26,25 @@ CLAP is designed as a tool to simplify usage of common tools used in brain resea
 
 ## Getting Started
 
-To get started with CLAP, download the code as a zip folder and run the configuration script. 
-You may need to update it's permissions using chmod +x before doing so.
+To get started with CLAP:
+
+1. Navigate to your chosen installation directory  
+   (`cd your/installation/folder`)
+2. Clone the repository  
+   (`git clone https://github.com/Squiyk/CLAP`)
+3. Navigate into the project directory  
+   (`cd CLAP`)
+4. Make the setup script executable (Mac/Linux)  
+   (`chmod +x START_CLAP_MAC_LINUX.sh`)
+5. Launch the application to initialize its environment  
+   (`./START_CLAP_MAC_LINUX.sh`)
+6. To update CLAP after new commits, navigate to the `CLAP` directory and run  
+   (`git pull`)
+
+Alternatively, you can download the code as a ZIP archive from the GitHub repository, extract it, and follow steps 4 and 5.
+
+In the application’s settings, you can view which external dependencies were detected on your system’s PATH and manually specify custom paths for any that were not automatically found.
+
 
 ## External Dependencies
 
