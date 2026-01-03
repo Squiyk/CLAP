@@ -43,7 +43,7 @@ class ScriptRegistry:
         'other': '#6F42C1'          # Purple
     }
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_path = Path(__file__).parent
         self.registry_file = self.base_path / "registry.json"
         self.registry_dir = self.base_path / "registry"
@@ -54,7 +54,7 @@ class ScriptRegistry:
         # Load registry
         self.registry_data = self._load_registry()
     
-    def _ensure_registry_structure(self):
+    def _ensure_registry_structure(self) -> None:
         """Create registry directory and file if they don't exist"""
         self.registry_dir.mkdir(parents=True, exist_ok=True)
         

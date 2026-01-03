@@ -17,6 +17,7 @@ import pygame
 from clap_settings import SettingsManager
 from clap_task_logger import TaskLogger
 from script_registry import ScriptRegistry
+from utils.constants import PAGES_WITH_FORM_VALUES, DEFAULT_PAGE, SIDEBAR_BUTTON_FG_COLOR
 
 class CLAP(ctk.CTk):
     # Tag colors for UI display (light mode, dark mode)
@@ -86,7 +87,7 @@ class CLAP(ctk.CTk):
         sidebar_button_card.grid_rowconfigure(1, weight=1)  # Spacer row
 
         # Home button at the top
-        self.sidebar_btn_home = ctk.CTkButton(sidebar_button_card, text="Home", fg_color="#0078D7", command=self.setup_home_page)
+        self.sidebar_btn_home = ctk.CTkButton(sidebar_button_card, text="Home", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.setup_home_page)
         self.sidebar_btn_home.grid(row=0, column=0, padx=5, pady=10)
         
         # Tools drawer (will appear above bottom buttons when opened)
@@ -108,13 +109,13 @@ class CLAP(ctk.CTk):
         self.tools_btn_script_repo.pack(fill="x", padx=10, pady=5)
         
         # Bottom buttons (Tools, Settings, History)
-        self.sidebar_btn_tools = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color="#0078D7", command=self.toggle_tools_menu)
+        self.sidebar_btn_tools = ctk.CTkButton(sidebar_button_card, text="Tools", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.toggle_tools_menu)
         self.sidebar_btn_tools.grid(row=2, column=0, padx=5, pady=10)
         
-        self.sidebar_btn_settings = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color="#0078D7", command=self.setup_settings_page)
+        self.sidebar_btn_settings = ctk.CTkButton(sidebar_button_card, text="Settings", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.setup_settings_page)
         self.sidebar_btn_settings.grid(row=3, column=0, padx=5, pady=10)
         
-        self.sidebar_btn_history = ctk.CTkButton(sidebar_button_card, text="History", fg_color="#0078D7", command=self.setup_history_page)
+        self.sidebar_btn_history = ctk.CTkButton(sidebar_button_card, text="History", fg_color=SIDEBAR_BUTTON_FG_COLOR, command=self.setup_history_page)
         self.sidebar_btn_history.grid(row=4, column=0, padx=5, pady=10)
         
         # Task status frame (appears when task is running)
@@ -159,7 +160,7 @@ class CLAP(ctk.CTk):
     def toggle_tools_menu(self):
         if self.tools_drawer.winfo_viewable():
             self.tools_drawer.grid_forget()
-            self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+            self.sidebar_btn_tools.configure(text="Tools", fg_color=SIDEBAR_BUTTON_FG_COLOR)
             self.settings_manager.set("tools_menu_expanded", False)
         else:
             self.tools_drawer.grid(row=1, column=0, sticky="sew", pady=(0, 10))
@@ -347,12 +348,125 @@ class CLAP(ctk.CTk):
                 pass
 
 
+    # Generic helper methods for common patterns
+
+    def _setup_page_common(self, page_name: str) -> None:
+        """
+        Common page setup logic shared across all page setup methods.
+        
+        This method handles:
+        - Saving form values from the previous page
+        - Clearing the main panel
+        - Saving the current page name
+        - Closing the tools drawer
+        
+        Args:
+            page_name: Name of the page being set up
+        """
+        # Save current page values before clearing
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
+            self._save_page_form_values(last_page)
+        
+        # Remove previous page
+        self.clear_main_pannel()
+        self._save_current_page(page_name)
+        
+        # Close tool menu
+        self.tools_drawer.grid_forget()
+        self.sidebar_btn_tools.configure(text="Tools", fg_color=SIDEBAR_BUTTON_FG_COLOR)
+    
+    def _start_task_thread(
+        self,
+        task_name: str,
+        task_type: str,
+        details: str,
+        target_function,
+        args: tuple,
+        input_files: list = None,
+        output_location: str = ""
+    ) -> None:
+        """
+        Generic method to start a task in a background thread.
+        
+        This method handles:
+        - Logging task start
+        - Showing task status
+        - Resetting cancel flag
+        - Creating and starting daemon thread
+        
+        Args:
+            task_name: Human-readable name of the task
+            task_type: Category/type of task (e.g., "Registration", "Connectome")
+            details: Additional details about the task
+            target_function: Function to run in the thread
+            args: Tuple of arguments to pass to target_function
+            input_files: List of input file paths (optional)
+            output_location: Output directory/file path (optional)
+        """
+        # Log task start
+        self.current_task_id = self.task_logger.start_task(
+            task_name,
+            task_type,
+            details,
+            input_files=input_files or [],
+            output_location=output_location
+        )
+        
+        self._show_task_status(task_name)
+        self.cancel_task_flag = False
+        
+        task = threading.Thread(target=target_function, args=args, daemon=True)
+        self.current_task_thread = task
+        task.start()
+    
+    def _on_task_complete(
+        self,
+        success: bool,
+        success_title: str,
+        success_message: str,
+        failure_title: str = "Error",
+        failure_message: str = None
+    ) -> None:
+        """
+        Generic completion handler for tasks.
+        
+        This method handles:
+        - Logging task completion
+        - Cleaning up task state
+        - Hiding task status
+        - Showing success/failure message
+        
+        Args:
+            success: Whether the task completed successfully
+            success_title: Title for success message box
+            success_message: Message for success message box
+            failure_title: Title for failure message box (default: "Error")
+            failure_message: Message for failure message box (default: generic message)
+        """
+        # Log task completion
+        if self.current_task_id is not None:
+            status = "completed" if success else "failed"
+            self.task_logger.complete_task(self.current_task_id, status)
+            self.current_task_id = None
+        
+        self.current_task_thread = None
+        self._hide_task_status()
+        
+        if success:
+            self.after(0, lambda: messagebox.showinfo(success_title, success_message))
+        else:
+            if failure_message is None:
+                failure_message = f"{success_message.split(' ')[0]} failed. Check the console for details."
+            self.after(0, lambda: messagebox.showerror(failure_title, failure_message))
+
+
 #### Page Setups ####
 
     def setup_home_page(self):
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -393,18 +507,8 @@ class CLAP(ctk.CTk):
 
 
     def setup_registration_tools_page(self):
-        # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
-            self._save_page_form_values(last_page)
-
-        # Remove previous page
-        self.clear_main_pannel()
-        self._save_current_page("registration")
-
-        # Close tool menu
-        self.tools_drawer.grid_forget()
-        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+        # Common page setup logic
+        self._setup_page_common("registration")
 
         # Setup new page
         self.registration_tools_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
@@ -519,18 +623,8 @@ class CLAP(ctk.CTk):
 
 
     def setup_connectome_toolbox_page(self):
-        # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
-            self._save_page_form_values(last_page)
-
-        # Remove previous page
-        self.clear_main_pannel()
-        self._save_current_page("connectome")
-
-        # Close tool menu
-        self.tools_drawer.grid_forget()
-        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+        # Common page setup logic
+        self._setup_page_common("connectome")
 
         # Setup new page
 
@@ -689,18 +783,8 @@ class CLAP(ctk.CTk):
 
 
     def setup_ROI_toolbox_page(self):
-        # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
-            self._save_page_form_values(last_page)
-
-        # Remove previous page
-        self.clear_main_pannel()
-        self._save_current_page("roi")
-
-        # Close tool menu
-        self.tools_drawer.grid_forget()
-        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+        # Common page setup logic
+        self._setup_page_common("roi")
 
         # Setup new page
         self.ROI_toolbox_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
@@ -820,18 +904,8 @@ class CLAP(ctk.CTk):
 
     def setup_segmentation_toolbox_page(self):
         """Setup the segmentation toolbox page for FreeSurfer/FastSurfer"""
-        # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
-            self._save_page_form_values(last_page)
-
-        # Remove previous page
-        self.clear_main_pannel()
-        self._save_current_page("segmentation")
-
-        # Close tool menu
-        self.tools_drawer.grid_forget()
-        self.sidebar_btn_tools.configure(text="Tools", fg_color="#0078D7")
+        # Common page setup logic
+        self._setup_page_common("segmentation")
 
         # Setup new page
         self.segmentation_toolbox_page = ctk.CTkScrollableFrame(self.main_pannel, corner_radius=0, fg_color="transparent")
@@ -1058,8 +1132,8 @@ class CLAP(ctk.CTk):
     def setup_script_repository_page(self):
         """Setup the script repository page"""
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -1904,8 +1978,8 @@ class CLAP(ctk.CTk):
     def setup_settings_page(self):
         """Setup the settings page"""
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -2272,8 +2346,8 @@ class CLAP(ctk.CTk):
     def setup_history_page(self):
         """Setup the task history page"""
         # Save current page values before clearing
-        last_page = self.settings_manager.get("last_page", "home")
-        if last_page in ["registration", "connectome", "roi", "segmentation"]:
+        last_page = self.settings_manager.get("last_page", DEFAULT_PAGE)
+        if last_page in PAGES_WITH_FORM_VALUES:
             self._save_page_form_values(last_page)
         
         self.clear_main_pannel()
@@ -2614,40 +2688,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Error", "Please provide all required inputs for registration.")
             return
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "New Registration",
-            "Registration",
-            f"{len(moving_list)} image(s)",
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="New Registration",
+            task_type="Registration",
+            details=f"{len(moving_list)} image(s)",
+            target_function=XC_XFM_TOOLBOX.new_xfm,
+            args=(out, fixed, moving_list, self.on_registration_complete, lambda: self.cancel_task_flag),
             input_files=[fixed] + moving_list,
             output_location=out
         )
-        
-        self._show_task_status("New Registration")
-        self.cancel_task_flag = False
-        
-        task = threading.Thread(target=XC_XFM_TOOLBOX.new_xfm, args=(out, fixed, moving_list, self.on_registration_complete, lambda: self.cancel_task_flag), daemon=True)
-        self.current_task_thread = task
-        task.start()
 
     def on_registration_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_new_registration_complete_message)
-        else:
-            self.after(0, self.show_new_registration_failed_message)
-
-    def show_new_registration_complete_message(self):
-        messagebox.showinfo("Success", "Registration Complete")
-    
-    def show_new_registration_failed_message(self):
-        messagebox.showerror("Error", "Registration failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Registration Complete",
+            failure_message="Registration failed. Check the console for details."
+        )
 
 # Apply transform thread starter
 
@@ -2665,40 +2723,24 @@ class CLAP(ctk.CTk):
                 messagebox.showerror("Input Error", "Please provide Reference, Output, at least one Moving Image, and at least one Transform.")
                 return
             
-            # Log task start
-            self.current_task_id = self.task_logger.start_task(
-                "Apply Transform",
-                "Registration",
-                f"{len(moving_list)} image(s)",
+            # Start task using generic method
+            self._start_task_thread(
+                task_name="Apply Transform",
+                task_type="Registration",
+                details=f"{len(moving_list)} image(s)",
+                target_function=XC_XFM_TOOLBOX.apply_existing_xfm,
+                args=(out_dir, transform_list, moving_list, reference, self.on_apply_transform_complete, lambda: self.cancel_task_flag),
                 input_files=moving_list + transform_list + [reference],
                 output_location=out_dir
             )
-            
-            self._show_task_status("Apply Transform")
-            self.cancel_task_flag = False
-
-            task = threading.Thread(target=XC_XFM_TOOLBOX.apply_existing_xfm, args=(out_dir, transform_list, moving_list, reference, self.on_apply_transform_complete, lambda: self.cancel_task_flag), daemon=True)
-            self.current_task_thread = task
-            task.start()
 
     def on_apply_transform_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_apply_transform_complete_message)
-        else:
-            self.after(0, self.show_apply_transform_failed_message)
-        
-    def show_apply_transform_complete_message(self):
-        messagebox.showinfo("Success", "Transform Application Complete")
-    
-    def show_apply_transform_failed_message(self):
-        messagebox.showerror("Error", "Transform application failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Transform Application Complete",
+            failure_message="Transform application failed. Check the console for details."
+        )
 
 ## Connectome threading ##
 
@@ -2719,40 +2761,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "Please provide Mask Image, at least one Track file and an output directory.")
             return
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Generate Connectomes",
-            "Connectome",
-            f"{len(tracks_list)} track(s)",
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Generate Connectomes",
+            task_type="Connectome",
+            details=f"{len(tracks_list)} track(s)",
+            target_function=XC_CONNECTOME_TOOLBOX.gen_connectome,
+            args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete, lambda: self.cancel_task_flag),
             input_files=[mask_image] + tracks_list + tracks_weights_list,
             output_location=output_dir
         )
-        
-        self._show_task_status("Generate Connectomes")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.gen_connectome, args=(mask_image, tracks_list, output_dir, tracks_weights_list, self.on_connectome_complete, lambda: self.cancel_task_flag), daemon=True)
-        self.current_task_thread = task
-        task.start()
 
     def on_connectome_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_connectome_complete_message)
-        else:
-            self.after(0, self.show_connectome_failed_message)
-
-    def show_connectome_complete_message(self):
-        messagebox.showinfo("Success", "Connectome Generation Complete")
-    
-    def show_connectome_failed_message(self):
-        messagebox.showerror("Error", "Connectome generation failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Connectome Generation Complete",
+            failure_message="Connectome generation failed. Check the console for details."
+        )
 
 # Generate z-scored connectome thread starter
     def start_z_scored_connectome_thread(self):
@@ -2765,40 +2791,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "Please provide Subject Connectome, Reference Connectomes, and Output Directory.")
             return
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Z-Score Connectome",
-            "Connectome",
-            f"{len(ref_connectomes_list)} reference(s)",
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Z-Score Connectome",
+            task_type="Connectome",
+            details=f"{len(ref_connectomes_list)} reference(s)",
+            target_function=XC_CONNECTOME_TOOLBOX.z_scored_connectome,
+            args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag),
             input_files=[subject_connectome] + ref_connectomes_list,
             output_location=output_dir
         )
-        
-        self._show_task_status("Z-Score Connectome")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.z_scored_connectome, args=(subject_connectome, ref_connectomes_list, output_dir, self.on_z_score_complete, lambda: self.cancel_task_flag), daemon=True)
-        self.current_task_thread = task
-        task.start()
 
     def on_z_score_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_z_score_complete_message)
-        else:
-            self.after(0, self.show_z_score_failed_message)
-
-    def show_z_score_complete_message(self):
-        messagebox.showinfo("Success", "Z-Score Computation Complete")
-    
-    def show_z_score_failed_message(self):
-        messagebox.showerror("Error", "Z-Score computation failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Z-Score Computation Complete",
+            failure_message="Z-Score computation failed. Check the console for details."
+        )
 
 # Display connectome thread starter
     def start_display_connectome_thread(self):
@@ -2810,18 +2820,6 @@ class CLAP(ctk.CTk):
         if not cnctms_list or not luts_list:
             messagebox.showerror("Input Error", "Please provide at least one Connectome and one LUT file.")
             return
-        
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Display Connectomes",
-            "Connectome",
-            f"{len(cnctms_list)} connectome(s)",
-            input_files=cnctms_list + luts_list,
-            output_location="Display only"
-        )
-        
-        self._show_task_status("Display Connectomes")
-        self.cancel_task_flag = False
         
         lut_map = {}
         for lut in luts_list:
@@ -2840,28 +2838,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "No valid Connectome-LUT pairs found.")
             return
 
-        task = threading.Thread(target=XC_CONNECTOME_TOOLBOX.display_connectome, args=(paired_data, self.on_display_complete), daemon=True)
-        self.current_task_thread = task
-        task.start()
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Display Connectomes",
+            task_type="Connectome",
+            details=f"{len(cnctms_list)} connectome(s)",
+            target_function=XC_CONNECTOME_TOOLBOX.display_connectome,
+            args=(paired_data, self.on_display_complete),
+            input_files=cnctms_list + luts_list,
+            output_location="Display only"
+        )
     
     def on_display_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_display_complete_message)
-        else:
-            self.after(0, self.show_display_failed_message)
-
-    def show_display_complete_message(self):
-        messagebox.showinfo("Success", "Connectome Display Complete")
-    
-    def show_display_failed_message(self):
-        messagebox.showerror("Error", "Connectome display failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="Connectome Display Complete",
+            failure_message="Connectome display failed. Check the console for details."
+        )
 
 ## ROI Toolbox threading ##
     def start_seeg_roi_mask_thread(self):
@@ -2883,40 +2877,24 @@ class CLAP(ctk.CTk):
             messagebox.showerror("Input Error", "Please provide Reference Mask Image, SEEG Coordinates File, and Output Directory.")
             return
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "Generate SEEG ROI Masks",
-            "ROI Toolbox",
-            f"Mode: {raw_mode}, Radius: {sel_rad}mm",
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="Generate SEEG ROI Masks",
+            task_type="ROI Toolbox",
+            details=f"Mode: {raw_mode}, Radius: {sel_rad}mm",
+            target_function=XC_ROI_TOOLBOX.generate_seeg_roi_masks,
+            args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag),
             input_files=[ref_mask_img, seeg_coords_file],
             output_location=output_dir
         )
-        
-        self._show_task_status("Generate SEEG ROI Masks")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(target=XC_ROI_TOOLBOX.generate_seeg_roi_masks, args=(ref_mask_img, seeg_coords_file, output_dir, sel_rad, is_bipolar_mode, self.on_seeg_roi_mask_complete, lambda: self.cancel_task_flag), daemon=True)
-        self.current_task_thread = task
-        task.start()
 
     def on_seeg_roi_mask_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_seeg_roi_mask_complete_message)
-        else:
-            self.after(0, self.show_seeg_roi_mask_failed_message)
-
-    def show_seeg_roi_mask_complete_message(self):
-        messagebox.showinfo("Success", "SEEG ROI Mask Generation Complete")
-    
-    def show_seeg_roi_mask_failed_message(self):
-        messagebox.showerror("Error", "SEEG ROI mask generation failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="SEEG ROI Mask Generation Complete",
+            failure_message="SEEG ROI mask generation failed. Check the console for details."
+        )
 
 ## Segmentation Toolbox threading ##
 
@@ -2997,23 +2975,12 @@ class CLAP(ctk.CTk):
         task.start()
 
     def on_recon_all_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_recon_all_complete_message)
-        else:
-            self.after(0, self.show_recon_all_failed_message)
-
-    def show_recon_all_complete_message(self):
-        messagebox.showinfo("Success", "FreeSurfer recon-all completed")
-    
-    def show_recon_all_failed_message(self):
-        messagebox.showerror("Error", "FreeSurfer recon-all failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="FreeSurfer recon-all completed",
+            failure_message="FreeSurfer recon-all failed. Check the console for details."
+        )
 
     def start_fastsurfer_thread(self):
         """Start thread to run FastSurfer"""
@@ -3033,20 +3000,12 @@ class CLAP(ctk.CTk):
         fastsurfer_home = self.settings_manager.get("external_dependencies.fastsurfer_home", "")
         freesurfer_for_fastsurfer = self.settings_manager.get("external_dependencies.freesurfer_for_fastsurfer", "")
         
-        # Log task start
-        self.current_task_id = self.task_logger.start_task(
-            "FastSurfer",
-            "Segmentation",
-            f"Subject: {subject_id}",
-            input_files=[input_image],
-            output_location=output_dir
-        )
-        
-        self._show_task_status("FastSurfer")
-        self.cancel_task_flag = False
-
-        task = threading.Thread(
-            target=XC_SEGMENTATION_TOOLBOX.run_fastsurfer,
+        # Start task using generic method
+        self._start_task_thread(
+            task_name="FastSurfer",
+            task_type="Segmentation",
+            details=f"Subject: {subject_id}",
+            target_function=XC_SEGMENTATION_TOOLBOX.run_fastsurfer,
             args=(
                 input_image,
                 subject_id,
@@ -3059,29 +3018,17 @@ class CLAP(ctk.CTk):
                 self.on_fastsurfer_complete,
                 lambda: self.cancel_task_flag
             ),
-            daemon=True
+            input_files=[input_image],
+            output_location=output_dir
         )
-        self.current_task_thread = task
-        task.start()
 
     def on_fastsurfer_complete(self, success=True):
-        # Log task completion
-        if self.current_task_id is not None:
-            status = "completed" if success else "failed"
-            self.task_logger.complete_task(self.current_task_id, status)
-            self.current_task_id = None
-        self.current_task_thread = None
-        self._hide_task_status()
-        if success:
-            self.after(0, self.show_fastsurfer_complete_message)
-        else:
-            self.after(0, self.show_fastsurfer_failed_message)
-
-    def show_fastsurfer_complete_message(self):
-        messagebox.showinfo("Success", "FastSurfer completed")
-    
-    def show_fastsurfer_failed_message(self):
-        messagebox.showerror("Error", "FastSurfer failed. Check the console for details.")
+        self._on_task_complete(
+            success=success,
+            success_title="Success",
+            success_message="FastSurfer completed",
+            failure_message="FastSurfer failed. Check the console for details."
+        )
 
     def browse_freesurfer_license(self):
         """Browse for FreeSurfer license file"""
