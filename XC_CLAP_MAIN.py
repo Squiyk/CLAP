@@ -1774,7 +1774,8 @@ class CLAP(ctk.CTk):
         
         # Load script content
         try:
-            script_path = self.script_registry.get_script_absolute_path(script)
+            # Construct path using base_path and relative_path
+            script_path = self.script_registry.base_path / script.get("relative_path", "")
             with open(script_path, 'r', encoding='utf-8') as f:
                 code_content = f.read()
                 code_textbox.insert("0.0", code_content)
@@ -1783,111 +1784,10 @@ class CLAP(ctk.CTk):
         
         code_textbox.configure(state="disabled")  # Make read-only
         
-        # Action buttons
+        # Action buttons (Only Close button remains)
         action_frame = ctk.CTkFrame(container, fg_color="transparent")
         action_frame.grid(row=4, column=0, pady=(10, 0), sticky="ew")
         action_frame.grid_columnconfigure(0, weight=1)
-        action_frame.grid_columnconfigure(1, weight=1)
-        action_frame.grid_columnconfigure(2, weight=1)
-        
-        def run_in_terminal():
-            """Run the script in a native terminal window"""
-            script_path = self.script_registry.get_script_absolute_path(script)
-            language = script.get("language", "")
-            
-            if not language:
-                messagebox.showerror("Error", "Unknown language. Cannot determine how to run this script.")
-                return
-            
-            # Get the command to run
-            command = self.script_registry.get_interpreter_command(language, str(script_path))
-            
-            if not command:
-                messagebox.showerror("Error", f"No interpreter configured for {language}")
-                return
-            
-            # Detect OS and open terminal
-            system = platform.system()
-            
-            try:
-                if system == "Darwin":  # macOS
-                    # Use AppleScript to open Terminal and run command
-                    # Use shlex.quote to safely escape the command for AppleScript
-                    safe_command = shlex.quote(command)
-                    applescript = f'''
-                    tell application "Terminal"
-                        activate
-                        do script {safe_command}
-                    end tell
-                    '''
-                    subprocess.Popen(["osascript", "-e", applescript])
-                    
-                elif system == "Linux":
-                    # Try common Linux terminals with safe command passing
-                    # The command is passed to bash -c which handles it safely
-                    # We don't quote here because bash -c expects an unquoted command string
-                    terminals = [
-                        ["gnome-terminal", "--", "bash", "-c", f"{command}; exec bash"],
-                        ["xterm", "-e", "bash", "-c", f"{command}; bash"],
-                        ["konsole", "-e", "bash", "-c", f"{command}; bash"],
-                        ["xfce4-terminal", "-e", "bash", "-c", f"{command}; bash"]
-                    ]
-                    
-                    success = False
-                    for term_cmd in terminals:
-                        try:
-                            subprocess.Popen(term_cmd)
-                            success = True
-                            break
-                        except FileNotFoundError:
-                            continue
-                    
-                    if not success:
-                        messagebox.showerror("Error", "Could not find a suitable terminal emulator.")
-                        return
-                else:
-                    messagebox.showerror("Error", f"Terminal launching not supported on {system}")
-                    return
-                
-                messagebox.showinfo("Success", f"Script launched in terminal")
-                
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to launch terminal: {e}")
-        
-        def open_in_vscode():
-            """Open the script in VS Code"""
-            script_path = self.script_registry.get_script_absolute_path(script)
-            
-            try:
-                # Try to open in VS Code
-                subprocess.Popen(["code", str(script_path)])
-                messagebox.showinfo("Success", "Script opened in VS Code")
-            except FileNotFoundError:
-                messagebox.showerror("Error", "VS Code not found. Please install VS Code or add it to your PATH.")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to open in VS Code: {e}")
-        
-        run_btn = ctk.CTkButton(
-            action_frame,
-            text="Run in Terminal",
-            height=40,
-            fg_color="#6A5ACD",
-            hover_color="#5B4DB8",
-            font=ctk.CTkFont(family="Proxima Nova", size=14, weight="bold"),
-            command=run_in_terminal
-        )
-        run_btn.grid(row=0, column=0, padx=(0, 5), sticky="ew")
-        
-        vscode_btn = ctk.CTkButton(
-            action_frame,
-            text="Open in VS Code",
-            height=40,
-            fg_color="#007ACC",
-            hover_color="#005A9E",
-            font=ctk.CTkFont(family="Proxima Nova", size=14),
-            command=open_in_vscode
-        )
-        vscode_btn.grid(row=0, column=1, padx=5, sticky="ew")
         
         close_btn = ctk.CTkButton(
             action_frame,
@@ -1898,7 +1798,7 @@ class CLAP(ctk.CTk):
             font=ctk.CTkFont(family="Proxima Nova", size=14),
             command=inspector.destroy
         )
-        close_btn.grid(row=0, column=2, padx=(5, 0), sticky="ew")
+        close_btn.grid(row=0, column=0, sticky="ew")
 
 
     def setup_settings_page(self):

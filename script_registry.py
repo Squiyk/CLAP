@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import shlex
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -21,18 +20,6 @@ class ScriptRegistry:
         '.js': 'JavaScript',
         '.pl': 'Perl',
         '.rb': 'Ruby'
-    }
-    
-    # Extension to interpreter command mapping
-    # Note: Matlab is special-cased in get_interpreter_command()
-    LANGUAGE_INTERPRETERS = {
-        'Python': 'python',
-        'Bash': 'bash',
-        'R': 'Rscript',
-        'Matlab': 'matlab',
-        'JavaScript': 'node',
-        'Perl': 'perl',
-        'Ruby': 'ruby'
     }
     
     # Tag options with their colors
@@ -329,43 +316,6 @@ class ScriptRegistry:
             if script_tags:
                 tags.update(script_tags)
         return sorted(list(tags))
-    
-    def get_script_absolute_path(self, script: Dict) -> Path:
-        """Get absolute path to a script file"""
-        return self.base_path / script["relative_path"]
-    
-    def get_interpreter_command(self, language: str, script_path: str) -> str:
-        """
-        Get the command to execute a script with proper shell escaping
-        
-        This returns a command string that is safe to pass to bash -c or similar.
-        The script path is properly escaped using shlex.quote.
-        
-        Args:
-            language: Programming language
-            script_path: Absolute path to script file
-            
-        Returns:
-            Command string to execute the script (safely quoted for shell execution)
-        """
-        interpreter = self.LANGUAGE_INTERPRETERS.get(language, "")
-        
-        if not interpreter:
-            return ""
-        
-        # Use shlex.quote to safely escape the script path for shell execution
-        safe_path = shlex.quote(script_path)
-        
-        # Special handling for Matlab
-        if language == "Matlab":
-            # Matlab -batch expects a Matlab command as a string argument
-            # We escape single quotes for Matlab, and the whole thing is safe for shell
-            matlab_safe = script_path.replace("'", "''")  # Matlab string escaping
-            # The double quotes around the batch argument protect it from shell expansion
-            return f"{interpreter} -batch \"run('{matlab_safe}')\""
-        
-        # For all other languages, use interpreter with properly quoted path
-        return f"{interpreter} {safe_path}"
     
     def delete_script(self, filename: str) -> bool:
         """
