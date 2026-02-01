@@ -29,6 +29,7 @@ class CLAP(ctk.CTk):
     
     def __init__(self):
         super().__init__()
+        self.search_timer = None
 
         pygame.mixer.init()
         
@@ -1157,7 +1158,7 @@ class CLAP(ctk.CTk):
             border_width=2
         )
         self.search_entry.grid(row=0, column=4, padx=10, pady=10, sticky="ew")
-        self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_script_list())
+        self.search_entry.bind("<KeyRelease>", self.on_search_key_release)
         
         # Scripts list container
         self.scripts_list_frame = ctk.CTkScrollableFrame(
@@ -1612,6 +1613,19 @@ class CLAP(ctk.CTk):
             command=dialog.destroy
         )
         cancel_btn.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+
+    def on_search_key_release(self, event=None):
+        """
+        Delays the search until the user stops typing for 300ms
+        to prevent UI freezing.
+        """
+        if self.search_timer:
+            self.after_cancel(self.search_timer)
+
+        # Schedule the refresh_script_list to run in 300ms
+        # Pass the current text in the entry to the refresh function
+        search_term = self.search_entry.get()
+        self.search_timer = self.after(300, lambda: self.refresh_script_list(search_term=search_term))
     
     def open_script_inspector(self, script):
         """Open detailed inspector modal for a script"""
