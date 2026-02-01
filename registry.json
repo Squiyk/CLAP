@@ -1,3 +1,18 @@
 {
-    "scripts": []
+    "scripts": [
+        {
+            "filename": "FigRework.py",
+            "name": "FigRework",
+            "language": "Python",
+            "project": "HOPS",
+            "description": "One-time use script to adapt a figure from a table into plotted data.",
+            "dependencies": "numpy, pandas, matplotlib",
+            "author": "Xavier Carmona",
+            "tags": [
+                "other"
+            ],
+            "added_date": "2026-02-01T15:12:11.725924",
+            "relative_path": "registry/FigRework.py"
+        }
+    ]
 }
